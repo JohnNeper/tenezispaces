@@ -17,6 +17,7 @@ import DocumentViewer from "./pages/DocumentViewer";
 import SpacesOverview from "./pages/SpacesOverview";
 import SpaceChatPage from "./pages/SpaceChatPage";
 import CreateSpaceEnhanced from "./pages/CreateSpaceEnhanced";
+import DiscoverSpaces from "./pages/DiscoverSpaces";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/spaces" element={<ProtectedRoute><SpacesOverview /></ProtectedRoute>} />
             <Route path="/spaces/create" element={<ProtectedRoute><CreateSpaceEnhanced /></ProtectedRoute>} />
+            <Route path="/spaces/discover" element={<ProtectedRoute><DiscoverSpaces /></ProtectedRoute>} />
             <Route path="/spaces/:spaceId/chat" element={<ProtectedRoute><SpaceChatPage /></ProtectedRoute>} />
             <Route path="/documents/upload" element={<ProtectedRoute><DocumentUpload /></ProtectedRoute>} />
             <Route path="/documents/manage" element={<ProtectedRoute><DocumentManager /></ProtectedRoute>} />

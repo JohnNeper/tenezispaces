@@ -13,10 +13,12 @@ import {
   Sparkles, 
   FileText, 
   Clock,
-  RotateCcw
+  RotateCcw,
+  Eye
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useToast } from "@/hooks/use-toast";
+import { DocumentPreview } from "./DocumentPreview";
 
 interface Message {
   id: string;
@@ -37,6 +39,7 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -209,10 +212,20 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
                         <Badge 
                           key={source.name} 
                           variant="outline" 
-                          className="text-xs cursor-pointer hover:bg-muted/50 transition-colors"
+                          className="text-xs cursor-pointer hover:bg-muted/50 transition-colors group"
+                          onClick={() => {
+                            const doc = documents.find(d => d.name === source.name);
+                            if (doc) {
+                              setPreviewDocument({
+                                ...doc,
+                                size: "2.3 MB" // Mock size
+                              });
+                            }
+                          }}
                         >
                           <FileText className="w-3 h-3 mr-1" />
                           {source.name}
+                          <Eye className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </Badge>
                       ))}
                     </div>
@@ -268,6 +281,14 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
           </Button>
         </div>
       </div>
+
+      {/* Document Preview Modal */}
+      {previewDocument && (
+        <DocumentPreview
+          document={previewDocument}
+          onClose={() => setPreviewDocument(null)}
+        />
+      )}
     </div>
   );
 };
