@@ -9,15 +9,16 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { SocialAuthButtons } from "@/components/SocialAuthButtons";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import { z } from "zod";
 
 const signupSchema = z.object({
-  name: z.string().trim().min(2, "Le nom doit contenir au moins 2 caractères"),
-  email: z.string().email("Adresse email invalide"),
-  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+  name: z.string().trim().min(2),
+  email: z.string().email(),
+  password: z.string().min(8),
   confirmPassword: z.string()
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Les mots de passe ne correspondent pas",
+  message: "Passwords do not match",
   path: ["confirmPassword"]
 });
 
@@ -31,6 +32,7 @@ const Signup = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const { signup, socialAuth, isLoading } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const passwordStrength = {
     hasLength: formData.password.length >= 8,
@@ -61,8 +63,8 @@ const Signup = () => {
 
     if (!isPasswordStrong) {
       toast({
-        title: "Mot de passe trop faible",
-        description: "Veuillez vous assurer que votre mot de passe respecte tous les critères.",
+        title: t("auth.weakPassword"),
+        description: t("auth.weakPasswordDesc"),
         variant: "destructive"
       });
       return;
@@ -71,13 +73,13 @@ const Signup = () => {
     try {
       await signup(formData.name, formData.email, formData.password);
       toast({
-        title: "Compte créé avec succès!",
-        description: "Bienvenue dans Tenezis Spaces.",
+        title: t("auth.signupSuccess"),
+        description: t("auth.signupSuccessDesc"),
       });
     } catch (error) {
       toast({
-        title: "Erreur lors de la création du compte",
-        description: "Veuillez réessayer plus tard.",
+        title: t("auth.signupError"),
+        description: t("auth.signupErrorDesc"),
         variant: "destructive"
       });
     }
@@ -85,8 +87,8 @@ const Signup = () => {
 
   const handleSocialSuccess = () => {
     toast({
-      title: "Inscription réussie!",
-      description: "Votre compte a été créé avec succès.",
+      title: t("auth.socialSignup"),
+      description: t("auth.socialSignupDesc"),
     });
   };
 
@@ -109,17 +111,17 @@ const Signup = () => {
                 Tenezis
               </span>
             </div>
-            <h1 className="text-3xl font-bold text-foreground">Créez votre compte</h1>
+            <h1 className="text-3xl font-bold text-foreground">{t("auth.signup")}</h1>
             <p className="text-muted-foreground">
-              Commencez votre voyage avec Tenezis Spaces
+              {t("auth.signupDesc")}
             </p>
           </div>
 
           <Card className="shadow-elegant border-border/50 bg-gradient-card backdrop-blur-md">
             <CardHeader className="space-y-1 pb-6">
-              <CardTitle className="text-2xl text-center text-foreground">Inscription</CardTitle>
+              <CardTitle className="text-2xl text-center text-foreground">{t("nav.signup")}</CardTitle>
               <CardDescription className="text-center">
-                Créez votre compte pour commencer la collaboration intelligente
+                {t("auth.signupDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -127,14 +129,14 @@ const Signup = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-sm font-medium">
-                    Nom complet
+                    {t("auth.fullName")}
                   </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="name"
                       type="text"
-                      placeholder="Entrez votre nom complet"
+                      placeholder={t("auth.fullName")}
                       value={formData.name}
                       onChange={handleInputChange("name")}
                       className={`pl-10 h-12 border-border/50 focus:border-primary focus:ring-primary/20 ${
@@ -150,14 +152,14 @@ const Signup = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium">
-                    Adresse email
+                    {t("auth.email")}
                   </Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="Entrez votre email"
+                      placeholder={t("auth.email")}
                       value={formData.email}
                       onChange={handleInputChange("email")}
                       className={`pl-10 h-12 border-border/50 focus:border-primary focus:ring-primary/20 ${
@@ -173,14 +175,14 @@ const Signup = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-sm font-medium">
-                    Mot de passe
+                    {t("auth.password")}
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="password"
                       type="password"
-                      placeholder="Créez un mot de passe fort"
+                      placeholder={t("auth.password")}
                       value={formData.password}
                       onChange={handleInputChange("password")}
                       className={`pl-10 h-12 border-border/50 focus:border-primary focus:ring-primary/20 ${
@@ -195,7 +197,7 @@ const Signup = () => {
                   
                   {formData.password && (
                     <div className="space-y-2 mt-3 p-3 bg-muted/30 rounded-lg">
-                      <div className="text-xs font-medium text-muted-foreground mb-2">Critères du mot de passe :</div>
+                      <div className="text-xs font-medium text-muted-foreground mb-2">{t("auth.passwordCriteria")}</div>
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2 text-xs">
                           {passwordStrength.hasLength ? (
@@ -204,7 +206,7 @@ const Signup = () => {
                             <X className="w-3 h-3 text-destructive" />
                           )}
                           <span className={passwordStrength.hasLength ? "text-success" : "text-muted-foreground"}>
-                            Au moins 8 caractères
+                            {t("auth.minLength")}
                           </span>
                         </div>
                         <div className="flex items-center space-x-2 text-xs">
@@ -214,7 +216,7 @@ const Signup = () => {
                             <X className="w-3 h-3 text-destructive" />
                           )}
                           <span className={passwordStrength.hasUppercase ? "text-success" : "text-muted-foreground"}>
-                            Une lettre majuscule
+                            {t("auth.uppercase")}
                           </span>
                         </div>
                         <div className="flex items-center space-x-2 text-xs">
@@ -224,7 +226,7 @@ const Signup = () => {
                             <X className="w-3 h-3 text-destructive" />
                           )}
                           <span className={passwordStrength.hasLowercase ? "text-success" : "text-muted-foreground"}>
-                            Une lettre minuscule
+                            {t("auth.lowercase")}
                           </span>
                         </div>
                         <div className="flex items-center space-x-2 text-xs">
@@ -234,7 +236,7 @@ const Signup = () => {
                             <X className="w-3 h-3 text-destructive" />
                           )}
                           <span className={passwordStrength.hasNumber ? "text-success" : "text-muted-foreground"}>
-                            Un chiffre
+                            {t("auth.number")}
                           </span>
                         </div>
                       </div>
@@ -244,14 +246,14 @@ const Signup = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword" className="text-sm font-medium">
-                    Confirmer le mot de passe
+                    {t("auth.confirmPassword")}
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="confirmPassword"
                       type="password"
-                      placeholder="Confirmez votre mot de passe"
+                      placeholder={t("auth.confirmPassword")}
                       value={formData.confirmPassword}
                       onChange={handleInputChange("confirmPassword")}
                       className={`pl-10 h-12 border-border/50 focus:border-primary focus:ring-primary/20 ${
@@ -282,11 +284,11 @@ const Signup = () => {
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Création du compte...</span>
+                      <span>{t("auth.creatingAccount")}</span>
                     </div>
                   ) : (
                     <div className="flex items-center space-x-2">
-                      <span>Créer le compte</span>
+                      <span>{t("auth.createAccount")}</span>
                       <ArrowRight className="w-4 h-4" />
                     </div>
                   )}
@@ -294,12 +296,12 @@ const Signup = () => {
 
                 <div className="text-center">
                   <span className="text-sm text-muted-foreground">
-                    Vous avez déjà un compte ?{" "}
+                    {t("auth.hasAccount")}{" "}
                     <Link 
                       to="/login" 
                       className="text-primary hover:text-primary/80 transition-colors font-medium"
                     >
-                      Se connecter
+                      {t("nav.login")}
                     </Link>
                   </span>
                 </div>
@@ -308,13 +310,13 @@ const Signup = () => {
           </Card>
 
           <div className="text-center text-xs text-muted-foreground">
-            En créant un compte, vous acceptez nos{" "}
+            {t("auth.acceptTermsSignup")}{" "}
             <Link to="/terms" className="text-primary hover:underline">
-              Conditions d'utilisation
+              {t("auth.terms")}
             </Link>{" "}
             et notre{" "}
             <Link to="/privacy" className="text-primary hover:underline">
-              Politique de confidentialité
+              {t("auth.privacy")}
             </Link>
           </div>
         </div>

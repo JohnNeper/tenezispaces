@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Demo from "./pages/Demo";
 import Login from "./pages/Login";
@@ -32,13 +33,13 @@ const App = () => (
             <Route path="/demo" element={<Demo />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/spaces" element={<SpacesOverview />} />
-            <Route path="/spaces/create" element={<CreateSpaceEnhanced />} />
-            <Route path="/spaces/:spaceId/chat" element={<SpaceChatPage />} />
-            <Route path="/documents/upload" element={<DocumentUpload />} />
-            <Route path="/documents/manage" element={<DocumentManager />} />
-            <Route path="/documents/view" element={<DocumentViewer />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/spaces" element={<ProtectedRoute><SpacesOverview /></ProtectedRoute>} />
+            <Route path="/spaces/create" element={<ProtectedRoute><CreateSpaceEnhanced /></ProtectedRoute>} />
+            <Route path="/spaces/:spaceId/chat" element={<ProtectedRoute><SpaceChatPage /></ProtectedRoute>} />
+            <Route path="/documents/upload" element={<ProtectedRoute><DocumentUpload /></ProtectedRoute>} />
+            <Route path="/documents/manage" element={<ProtectedRoute><DocumentManager /></ProtectedRoute>} />
+            <Route path="/documents/view" element={<ProtectedRoute><DocumentViewer /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

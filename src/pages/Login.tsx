@@ -9,11 +9,12 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { SocialAuthButtons } from "@/components/SocialAuthButtons";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import { z } from "zod";
 
 const loginSchema = z.object({
-  email: z.string().email("Adresse email invalide"),
-  password: z.string().min(1, "Mot de passe requis")
+  email: z.string().email(),
+  password: z.string().min(1)
 });
 
 const Login = () => {
@@ -22,6 +23,7 @@ const Login = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const { login, socialAuth, isLoading } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,13 +45,13 @@ const Login = () => {
     try {
       await login(email, password);
       toast({
-        title: "Connexion réussie!",
-        description: "Vous êtes maintenant connecté à votre compte.",
+        title: t("auth.loginSuccess"),
+        description: t("auth.loginSuccessDesc"),
       });
     } catch (error) {
       toast({
-        title: "Erreur de connexion",
-        description: "Vérifiez vos identifiants et réessayez.",
+        title: t("auth.loginError"),
+        description: t("auth.loginErrorDesc"),
         variant: "destructive"
       });
     }
@@ -57,8 +59,8 @@ const Login = () => {
 
   const handleSocialSuccess = () => {
     toast({
-      title: "Connexion réussie!",
-      description: "Vous êtes maintenant connecté.",
+      title: t("auth.loginSuccess"),
+      description: t("auth.loginSuccessDesc"),
     });
   };
 
@@ -77,17 +79,17 @@ const Login = () => {
                 Tenezis
               </span>
             </div>
-            <h1 className="text-3xl font-bold text-foreground">Content de vous revoir</h1>
+            <h1 className="text-3xl font-bold text-foreground">{t("auth.welcome")}</h1>
             <p className="text-muted-foreground">
-              Connectez-vous à votre espace intelligent
+              {t("auth.signin")}
             </p>
           </div>
 
           <Card className="shadow-elegant border-border/50 bg-gradient-card backdrop-blur-md">
             <CardHeader className="space-y-1 pb-6">
-              <CardTitle className="text-2xl text-center text-foreground">Connexion</CardTitle>
+              <CardTitle className="text-2xl text-center text-foreground">{t("nav.login")}</CardTitle>
               <CardDescription className="text-center">
-                Entrez vos identifiants pour accéder à votre compte
+                {t("auth.signin")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -96,14 +98,14 @@ const Login = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium">
-                    Adresse email
+                    {t("auth.email")}
                   </Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="Entrez votre email"
+                      placeholder={t("auth.email")}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className={`pl-10 h-12 border-border/50 focus:border-primary focus:ring-primary/20 ${
@@ -119,14 +121,14 @@ const Login = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-sm font-medium">
-                    Mot de passe
+                    {t("auth.password")}
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="password"
                       type="password"
-                      placeholder="Entrez votre mot de passe"
+                      placeholder={t("auth.password")}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className={`pl-10 h-12 border-border/50 focus:border-primary focus:ring-primary/20 ${
@@ -145,7 +147,7 @@ const Login = () => {
                     to="/forgot-password" 
                     className="text-sm text-primary hover:text-primary/80 transition-colors"
                   >
-                    Mot de passe oublié ?
+                    {t("auth.forgotPassword")}
                   </Link>
                 </div>
 
@@ -157,11 +159,11 @@ const Login = () => {
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Connexion...</span>
+                      <span>{t("auth.signingIn")}</span>
                     </div>
                   ) : (
                     <div className="flex items-center space-x-2">
-                      <span>Se connecter</span>
+                      <span>{t("auth.signIn")}</span>
                       <ArrowRight className="w-4 h-4" />
                     </div>
                   )}
@@ -169,12 +171,12 @@ const Login = () => {
 
                 <div className="text-center">
                   <span className="text-sm text-muted-foreground">
-                    Pas encore de compte ?{" "}
+                    {t("auth.noAccount")}{" "}
                     <Link 
                       to="/signup" 
                       className="text-primary hover:text-primary/80 transition-colors font-medium"
                     >
-                      S'inscrire
+                      {t("nav.signup")}
                     </Link>
                   </span>
                 </div>
@@ -183,13 +185,13 @@ const Login = () => {
           </Card>
 
           <div className="text-center text-xs text-muted-foreground">
-            En vous connectant, vous acceptez nos{" "}
+            {t("auth.acceptTerms")}{" "}
             <Link to="/terms" className="text-primary hover:underline">
-              Conditions d'utilisation
+              {t("auth.terms")}
             </Link>{" "}
             et notre{" "}
             <Link to="/privacy" className="text-primary hover:underline">
-              Politique de confidentialité
+              {t("auth.privacy")}
             </Link>
           </div>
         </div>

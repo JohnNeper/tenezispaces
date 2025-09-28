@@ -19,11 +19,14 @@ import {
 import { Link } from "react-router-dom";
 import { UserProfile } from "@/components/UserProfile";
 import { AdvancedSearch } from "@/components/AdvancedSearch";
+import { FunctionalSpaceCard } from "@/components/FunctionalSpaceCard";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFilters, setSearchFilters] = useState({
     categories: [],
@@ -35,57 +38,63 @@ const Dashboard = () => {
   // Mock data for spaces
   const spaces = [
     {
-      id: 1,
+      id: "1",
       name: "Product Strategy",
       description: "Strategic planning and roadmap discussions",
-      type: "private",
-      role: "owner",
-      members: 8,
+      category: "Business",
+      tags: ["Strategy", "Planning", "Roadmap"],
+      visibility: 'private' as const,
+      owner: { name: "You", avatar: "" },
+      stats: { members: 8, documents: 45, messages: 124 },
+      aiModel: "GPT-5",
       lastActivity: "2 hours ago",
-      messages: 124,
-      category: "Business"
+      isOwner: true,
     },
     {
-      id: 2,
+      id: "2",
       name: "AI Research Hub",
       description: "Latest developments in AI and machine learning",
-      type: "public",
-      role: "collaborator", 
-      members: 32,
+      category: "Technology",
+      tags: ["AI", "Research", "ML"],
+      visibility: 'public' as const,
+      owner: { name: "Sarah Chen", avatar: "" },
+      stats: { members: 32, documents: 89, messages: 892 },
+      aiModel: "Claude Sonnet-4",
       lastActivity: "5 minutes ago",
-      messages: 892,
-      category: "Technology"
+      isOwner: false,
     },
     {
-      id: 3,
+      id: "3",
       name: "Design System",
       description: "UI/UX guidelines and component library",
-      type: "private",
-      role: "user",
-      members: 12,
-      lastActivity: "1 day ago", 
-      messages: 67,
-      category: "Design"
+      category: "Design",
+      tags: ["Design", "UI/UX", "Components"],
+      visibility: 'private' as const,
+      owner: { name: "Emma Thompson", avatar: "" },
+      stats: { members: 12, documents: 67, messages: 67 },
+      aiModel: "GPT-5",
+      lastActivity: "1 day ago",
+      isOwner: false,
     }
   ];
 
   const recentActivity = [
     {
       space: "AI Research Hub",
-      action: "Nouveau document uploadé",
-      time: "il y a 5 minutes",
+      action: t("dashboard.newDocument"),
+      time: t("dashboard.minutesAgo"),
       user: "Sarah Chen"
     },
     {
       space: "Product Strategy", 
-      action: "Message envoyé à l'IA",
-      time: "il y a 2 heures",
-      user: "Vous"
+      action: t("dashboard.messageSent"),
+      time: t("dashboard.hoursAgo"),
+      user: t("dashboard.you")
     },
     {
       space: "Design System",
-      action: "Membre ajouté",
-      time: "il y a 1 jour",
+      action: t("dashboard.memberAdded"),
+      time: t("dashboard.daysAgo"),
       user: "Mike Johnson"
     }
   ];
@@ -103,17 +112,14 @@ const Dashboard = () => {
       space.category.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesVisibility = searchFilters.visibility.length === 0 ||
-      searchFilters.visibility.includes(space.type);
-
-    const matchesRole = searchFilters.roles.length === 0 ||
-      searchFilters.roles.includes(space.role);
+      searchFilters.visibility.includes(space.visibility);
 
     const matchesCategory = searchFilters.categories.length === 0 ||
       searchFilters.categories.some(cat => 
         space.category.toLowerCase().includes(cat.toLowerCase())
       );
 
-    return matchesQuery && matchesVisibility && matchesRole && matchesCategory;
+    return matchesQuery && matchesVisibility && matchesCategory;
   });
 
   return (
@@ -148,16 +154,16 @@ const Dashboard = () => {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-foreground">
-                Bienvenue, {user?.name || 'Utilisateur'}!
+                {t("dashboard.welcome")}, {user?.name || 'Utilisateur'}!
               </h1>
               <p className="text-muted-foreground">
-                Vous avez {filteredSpaces.length} espaces actifs et 3 nouveaux messages
+                Vous avez {filteredSpaces.length} {t("dashboard.activeSpaces")} et 3 {t("dashboard.newMessages")}
               </p>
             </div>
             <Link to="/spaces/create">
               <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
                 <Plus className="w-4 h-4 mr-2" />
-                Créer un espace
+                {t("dashboard.createSpace")}
               </Button>
             </Link>
           </div>
@@ -165,7 +171,7 @@ const Dashboard = () => {
           {/* Advanced Search */}
           <AdvancedSearch 
             onSearch={handleSearch}
-            placeholder="Rechercher dans vos espaces..."
+            placeholder={t("dashboard.searchSpaces")}
             className="max-w-2xl"
           />
         </div>
@@ -183,7 +189,7 @@ const Dashboard = () => {
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-foreground">52</p>
-                      <p className="text-sm text-muted-foreground">Membres d'équipe</p>
+                      <p className="text-sm text-muted-foreground">{t("dashboard.teamMembers")}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -197,7 +203,7 @@ const Dashboard = () => {
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-foreground">1,247</p>
-                      <p className="text-sm text-muted-foreground">Documents</p>
+                      <p className="text-sm text-muted-foreground">{t("dashboard.documents")}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -211,7 +217,7 @@ const Dashboard = () => {
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-foreground">15.2K</p>
-                      <p className="text-sm text-muted-foreground">Messages IA</p>
+                      <p className="text-sm text-muted-foreground">{t("dashboard.aiMessages")}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -223,18 +229,18 @@ const Dashboard = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl">Vos Espaces</CardTitle>
+                    <CardTitle className="text-xl">{t("dashboard.yourSpaces")}</CardTitle>
                     <CardDescription>
-                      Gérez et accédez à vos espaces de travail collaboratifs
+                      {t("dashboard.manageSpaces")}
                     </CardDescription>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge variant="secondary" className="text-xs">
-                      {filteredSpaces.length} résultat{filteredSpaces.length !== 1 ? 's' : ''}
+                      {filteredSpaces.length} {filteredSpaces.length === 1 ? t("dashboard.results") : t("dashboard.resultsPlural")}
                     </Badge>
                     <Link to="/spaces">
                       <Button variant="outline" size="sm">
-                        Voir tout
+                        {t("dashboard.viewAll")}
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </Link>
@@ -248,68 +254,26 @@ const Dashboard = () => {
                       <Target className="w-8 h-8 text-muted-foreground" />
                     </div>
                     <h3 className="font-semibold text-foreground mb-2">
-                      Aucun espace trouvé
+                      {t("dashboard.noSpacesFound")}
                     </h3>
                     <p className="text-muted-foreground mb-4">
-                      Essayez d'ajuster vos critères de recherche ou créez un nouvel espace
+                      {t("dashboard.adjustSearch")}
                     </p>
                     <Link to="/spaces/create">
                       <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
                         <Plus className="w-4 h-4 mr-2" />
-                        Créer un espace
+                        {t("dashboard.createSpace")}
                       </Button>
                     </Link>
                   </div>
                 ) : (
-                  filteredSpaces.map((space) => (
-                  <Card key={space.id} className="border border-border/50 hover:shadow-card transition-all cursor-pointer">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-3 flex-1">
-                          <div className="flex items-start space-x-3">
-                            <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                              {space.type === "private" ? (
-                                <Lock className="w-5 h-5 text-primary-foreground" />
-                              ) : (
-                                <Globe className="w-5 h-5 text-primary-foreground" />
-                              )}
-                            </div>
-                            <div className="space-y-2 flex-1">
-                              <div className="flex items-center space-x-2">
-                                <h3 className="font-semibold text-foreground">{space.name}</h3>
-                                {space.role === "owner" && (
-                                  <Crown className="w-4 h-4 text-warning" />
-                                )}
-                                <Badge variant={space.type === "private" ? "secondary" : "outline"}>
-                                  {space.type}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {space.description}
-                              </p>
-                              <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                                <div className="flex items-center space-x-1">
-                                  <Users className="w-3 h-3" />
-                                  <span>{space.members} membres</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <MessageSquare className="w-3 h-3" />
-                                  <span>{space.messages} messages</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <Clock className="w-3 h-3" />
-                                  <span>{space.lastActivity}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm">
-                          <ArrowRight className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  filteredSpaces.map((space, index) => (
+                  <div 
+                    key={space.id}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <FunctionalSpaceCard space={space} />
+                  </div>
                   ))
                 )}
               </CardContent>
@@ -321,9 +285,9 @@ const Dashboard = () => {
             {/* Recent Activity */}
             <Card className="shadow-elegant border-border/50">
               <CardHeader>
-                <CardTitle className="text-lg">Activité récente</CardTitle>
+                <CardTitle className="text-lg">{t("dashboard.recentActivity")}</CardTitle>
                 <CardDescription>
-                  Dernières mises à jour de vos espaces
+                  {t("dashboard.latestUpdates")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -335,7 +299,7 @@ const Dashboard = () => {
                         {activity.action}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        dans {activity.space} • par {activity.user}
+                        {t("dashboard.in")} {activity.space} • {t("dashboard.by")} {activity.user}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {activity.time}
@@ -349,15 +313,15 @@ const Dashboard = () => {
             {/* Quick Actions */}
             <Card className="shadow-elegant border-border/50">
               <CardHeader>
-                <CardTitle className="text-lg">Actions rapides</CardTitle>
+                <CardTitle className="text-lg">{t("dashboard.quickActions")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Link to="/spaces/create">
                   <Button variant="ghost" className="w-full justify-start h-auto p-3">
                     <Plus className="w-4 h-4 mr-3" />
                     <div className="text-left">
-                      <p className="font-medium">Créer un espace</p>
-                      <p className="text-xs text-muted-foreground">Démarrer un nouvel espace de travail</p>
+                      <p className="font-medium">{t("spaces.create")}</p>
+                      <p className="text-xs text-muted-foreground">{t("dashboard.startNewWorkspace")}</p>
                     </div>
                   </Button>
                 </Link>
@@ -366,8 +330,8 @@ const Dashboard = () => {
                   <Button variant="ghost" className="w-full justify-start h-auto p-3">
                     <FileText className="w-4 h-4 mr-3" />
                     <div className="text-left">
-                      <p className="font-medium">Uploader des documents</p>
-                      <p className="text-xs text-muted-foreground">Ajouter des fichiers à la base de connaissances</p>
+                      <p className="font-medium">{t("dashboard.uploadDocuments")}</p>
+                      <p className="text-xs text-muted-foreground">{t("dashboard.addToKnowledge")}</p>
                     </div>
                   </Button>
                 </Link>
@@ -376,8 +340,8 @@ const Dashboard = () => {
                   <Button variant="ghost" className="w-full justify-start h-auto p-3">
                     <TrendingUp className="w-4 h-4 mr-3" />
                     <div className="text-left">
-                      <p className="font-medium">Découvrir des espaces</p>
-                      <p className="text-xs text-muted-foreground">Trouver des espaces publics</p>
+                      <p className="font-medium">{t("dashboard.discoverSpaces")}</p>
+                      <p className="text-xs text-muted-foreground">{t("dashboard.findPublicSpaces")}</p>
                     </div>
                   </Button>
                 </Link>
