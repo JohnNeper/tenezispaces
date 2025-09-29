@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Settings, 
@@ -20,10 +21,13 @@ import {
   Globe,
   Lock,
   UserPlus,
-  X
+  X,
+  Bot,
+  ExternalLink
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/useLanguage";
+import { spaceService } from "@/services/spaceService";
 
 interface SpaceSettingsProps {
   space: {
@@ -31,6 +35,7 @@ interface SpaceSettingsProps {
     name: string;
     description: string;
     visibility: 'public' | 'private';
+    aiModel: string;
     owner: { name: string; avatar: string };
     stats: { members: number; documents: number; messages: number };
     isOwner: boolean;
@@ -44,8 +49,10 @@ export const SpaceSettings = ({ space, onClose }: SpaceSettingsProps) => {
   const [formData, setFormData] = useState({
     name: space.name,
     description: space.description,
-    visibility: space.visibility
+    visibility: space.visibility,
+    aiModel: space.aiModel
   });
+  const [availableModels] = useState(spaceService.getAvailableAIModels());
   const [members] = useState([
     { id: '1', name: 'Sarah Chen', email: 'sarah@example.com', role: 'owner', avatar: '' },
     { id: '2', name: 'Alex Rodriguez', email: 'alex@example.com', role: 'admin', avatar: '' },
@@ -54,29 +61,55 @@ export const SpaceSettings = ({ space, onClose }: SpaceSettingsProps) => {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
 
-  const generateInviteLink = () => {
-    const link = `${window.location.origin}/spaces/${space.id}/invite?token=abc123xyz`;
-    navigator.clipboard.writeText(link);
-    toast({
-      title: "Lien d'invitation copié!",
-      description: "Le lien a été copié dans votre presse-papiers.",
-    });
+  const generateInviteLink = async () => {
+    try {
+      const shareLink = await spaceService.generateShareLink(space.id);
+      navigator.clipboard.writeText(shareLink.url);
+      toast({
+        title: t("settings.linkCopied"),
+        description: t("settings.linkCopiedDesc"),
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer le lien d'invitation.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const sendEmailInvite = () => {
+  const sendEmailInvite = async () => {
     if (!inviteEmail) return;
-    toast({
-      title: "Invitation envoyée!",
-      description: `Une invitation a été envoyée à ${inviteEmail}.`,
-    });
-    setInviteEmail("");
+    try {
+      await spaceService.sendInviteEmail(space.id, inviteEmail, inviteRole);
+      toast({
+        title: t("settings.inviteSent"),
+        description: t("settings.inviteSentDesc", { email: inviteEmail }),
+      });
+      setInviteEmail("");
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'envoyer l'invitation.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const updateSpaceSettings = () => {
-    toast({
-      title: "Paramètres mis à jour!",
-      description: "Les paramètres de l'espace ont été sauvegardés.",
-    });
+  const updateSpaceSettings = async () => {
+    try {
+      await spaceService.updateSpaceSettings(space.id, formData);
+      toast({
+        title: t("settings.settingsUpdated"),
+        description: t("settings.settingsUpdatedDesc"),
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour les paramètres.",
+        variant: "destructive"
+      });
+    }
   };
 
   const deleteSpace = () => {
@@ -154,19 +187,41 @@ export const SpaceSettings = ({ space, onClose }: SpaceSettingsProps) => {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="aiModel">{t("settings.aiModel")}</Label>
+                <Select value={formData.aiModel} onValueChange={(value) => setFormData(prev => ({ ...prev, aiModel: value }))}>
+                  <SelectTrigger className="border-border/50">
+                    <SelectValue placeholder={t("settings.selectModel")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableModels.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        <div className="flex items-center gap-2">
+                          <Bot className="w-4 h-4" />
+                          <div>
+                            <div className="font-medium">{model.name}</div>
+                            <div className="text-xs text-muted-foreground">{model.description}</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="flex items-center justify-between py-3">
                 <div className="space-y-1">
-                  <Label>Visibilité</Label>
+                  <Label>{t("settings.visibility")}</Label>
                   <div className="flex items-center space-x-2">
                     {formData.visibility === 'public' ? (
                       <>
                         <Globe className="w-4 h-4 text-success" />
-                        <span className="text-sm text-muted-foreground">Public - Visible par tous</span>
+                        <span className="text-sm text-muted-foreground">{t("settings.publicDesc")}</span>
                       </>
                     ) : (
                       <>
                         <Lock className="w-4 h-4 text-warning" />
-                        <span className="text-sm text-muted-foreground">Privé - Sur invitation uniquement</span>
+                        <span className="text-sm text-muted-foreground">{t("settings.privateDesc")}</span>
                       </>
                     )}
                   </div>
@@ -338,13 +393,13 @@ export const SpaceSettings = ({ space, onClose }: SpaceSettingsProps) => {
               <CardTitle>Actions rapides</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={generateInviteLink}>
                 <Share className="w-4 h-4 mr-2" />
-                Partager l'espace
+                {t("settings.shareSpace")}
               </Button>
               <Button variant="outline" className="w-full justify-start">
-                <Copy className="w-4 h-4 mr-2" />
-                Dupliquer l'espace
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {t("settings.openInNew")}
               </Button>
             </CardContent>
           </Card>

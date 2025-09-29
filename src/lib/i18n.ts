@@ -198,6 +198,21 @@ const resources = {
       "chat.documentPreview": "Document Preview",
       "chat.closePreview": "Close Preview",
       
+      // Settings
+      "settings.aiModel": "AI Model",
+      "settings.selectModel": "Select an AI model",
+      "settings.visibility": "Visibility", 
+      "settings.publicDesc": "Public - Visible by everyone",
+      "settings.privateDesc": "Private - Invitation only",
+      "settings.shareSpace": "Share Space",
+      "settings.openInNew": "Open in New Tab",
+      "settings.linkCopied": "Invitation link copied!",
+      "settings.linkCopiedDesc": "The link has been copied to your clipboard.",
+      "settings.inviteSent": "Invitation sent!",
+      "settings.inviteSentDesc": "An invitation has been sent to {{email}}.",
+      "settings.settingsUpdated": "Settings updated!",
+      "settings.settingsUpdatedDesc": "Space settings have been saved.",
+      
       // Organizations
       "org.create": "Create Organization",
       "org.manage": "Manage Organization", 
@@ -522,6 +537,21 @@ const resources = {
       "chat.viewDocument": "Voir le document",
       "chat.documentPreview": "Aperçu du document",
       "chat.closePreview": "Fermer l'aperçu",
+      
+      // Settings
+      "settings.aiModel": "Modèle IA",
+      "settings.selectModel": "Sélectionner un modèle IA",
+      "settings.visibility": "Visibilité",
+      "settings.publicDesc": "Public - Visible par tous",
+      "settings.privateDesc": "Privé - Sur invitation uniquement",
+      "settings.shareSpace": "Partager l'espace",
+      "settings.openInNew": "Ouvrir dans un nouvel onglet", 
+      "settings.linkCopied": "Lien d'invitation copié !",
+      "settings.linkCopiedDesc": "Le lien a été copié dans votre presse-papiers.",
+      "settings.inviteSent": "Invitation envoyée !",
+      "settings.inviteSentDesc": "Une invitation a été envoyée à {{email}}.",
+      "settings.settingsUpdated": "Paramètres mis à jour !",
+      "settings.settingsUpdatedDesc": "Les paramètres de l'espace ont été sauvegardés.",
       
       // Documents  
       "docs.upload": "Télécharger des Documents",

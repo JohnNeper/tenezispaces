@@ -19,14 +19,10 @@ import {
 import { useLanguage } from "@/hooks/useLanguage";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentPreview } from "./DocumentPreview";
+import { chatService, type ChatMessage } from "@/services/chatService";
 
-interface Message {
-  id: string;
-  content: string;
-  type: 'user' | 'ai';
-  timestamp: Date;
-  sources?: { name: string; type: string }[];
-}
+// Utilise le type ChatMessage du service
+type Message = ChatMessage;
 
 interface SpaceChatProps {
   spaceId: string;
@@ -43,6 +39,20 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
   const { toast } = useToast();
+
+  // Charger l'historique des conversations au montage
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      try {
+        const history = await chatService.getChatHistory(spaceId);
+        setMessages(history);
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+      }
+    };
+    
+    loadChatHistory();
+  }, [spaceId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -63,34 +73,35 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = input;
     setInput("");
     setIsLoading(true);
 
     try {
-      // Simulate AI response
-      setTimeout(() => {
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: `Based on the documents in "${spaceName}", I can help you with that. This is a simulated response using ${aiModel}. The information comes from your uploaded documents including ${documents.slice(0, 2).map(d => d.name).join(', ')} and others.`,
-          type: 'ai',
-          timestamp: new Date(),
-          sources: documents.slice(0, 3),
-        };
-        
-        setMessages(prev => [...prev, aiMessage]);
-        setIsLoading(false);
-        
-        toast({
-          title: t("chat.responseGenerated"),
-          description: t("chat.aiAnalyzed"),
-        });
-      }, 2000);
+      const response = await chatService.sendMessage(spaceId, currentInput, aiModel);
+      
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: response.message,
+        type: 'ai',
+        timestamp: new Date(),
+        sources: response.sources,
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+      
+      toast({
+        title: t("chat.responseGenerated"),
+        description: t("chat.aiAnalyzed"),
+      });
     } catch (error) {
-        toast({
-          title: "Erreur",
-          description: t("chat.error"),
-          variant: "destructive"
-        });
+      console.error('Chat error:', error);
+      toast({
+        title: "Erreur",
+        description: t("chat.error"),
+        variant: "destructive"
+      });
+    } finally {
       setIsLoading(false);
     }
   };

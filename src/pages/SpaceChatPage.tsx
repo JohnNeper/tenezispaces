@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   ArrowLeft, 
   Settings, 
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { SpaceChat } from "@/components/SpaceChat";
+import { SpaceSettings } from "@/components/SpaceSettings";
 import { useLanguage } from "@/hooks/useLanguage";
 
 const mockSpace = {
@@ -29,7 +31,7 @@ const mockSpace = {
   visibility: 'public' as const,
   owner: { name: "Sarah Chen", avatar: "" },
   stats: { members: 12, documents: 24, messages: 156 },
-  aiModel: "GPT-5",
+  aiModel: "gpt-4",
   lastActivity: "2 hours ago",
   isOwner: true,
 };
@@ -53,6 +55,7 @@ export default function SpaceChatPage() {
   const { spaceId } = useParams();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("chat");
+  const [showSettings, setShowSettings] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-subtle flex">
@@ -85,10 +88,23 @@ export default function SpaceChatPage() {
           </div>
           
           <div className="flex gap-2 mt-4">
-            <Button size="sm" variant="outline" className="flex-1">
-              <Settings className="w-4 h-4 mr-2" />
-              {t("chat.settings")}
-            </Button>
+            <Dialog open={showSettings} onOpenChange={setShowSettings}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline" className="flex-1">
+                  <Settings className="w-4 h-4 mr-2" />
+                  {t("chat.settings")}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+                <DialogHeader>
+                  <DialogTitle>Paramètres de l'espace</DialogTitle>
+                </DialogHeader>
+                <SpaceSettings 
+                  space={mockSpace} 
+                  onClose={() => setShowSettings(false)} 
+                />
+              </DialogContent>
+            </Dialog>
             <Button size="sm" variant="outline">
               <Share2 className="w-4 h-4" />
             </Button>
