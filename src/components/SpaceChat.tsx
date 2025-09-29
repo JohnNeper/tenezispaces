@@ -20,9 +20,10 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentPreview } from "./DocumentPreview";
 import { chatService, type ChatMessage } from "@/services/chatService";
+import { spaceStore, type Space } from "@/stores/spaceStore";
 
-// Utilise le type ChatMessage du service
-type Message = ChatMessage;
+// Utilise le type des messages du store
+type Message = Space['messages'][0];
 
 interface SpaceChatProps {
   spaceId: string;
@@ -40,18 +41,12 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
   const { t } = useLanguage();
   const { toast } = useToast();
 
-  // Charger l'historique des conversations au montage
+  // Mettre à jour les messages existants avec le spaceStore
   useEffect(() => {
-    const loadChatHistory = async () => {
-      try {
-        const history = await chatService.getChatHistory(spaceId);
-        setMessages(history);
-      } catch (error) {
-        console.error('Error loading chat history:', error);
-      }
-    };
-    
-    loadChatHistory();
+    if (spaceId) {
+      const history = spaceStore.getMessages(spaceId);
+      setMessages(history);
+    }
   }, [spaceId]);
 
   const scrollToBottom = () => {
@@ -65,30 +60,37 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input,
-      type: 'user',
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    const currentInput = input;
+    const currentInput = input.trim();
     setInput("");
     setIsLoading(true);
+
+    // Ajouter le message utilisateur au store
+    const userId = localStorage.getItem('tenezis_user') ? JSON.parse(localStorage.getItem('tenezis_user')!).id : '1';
+    
+    spaceStore.addMessage(spaceId, {
+      content: currentInput,
+      type: 'user',
+      userId: userId
+    });
+
+    // Mettre à jour l'état local immédiatement
+    const updatedMessages = spaceStore.getMessages(spaceId);
+    setMessages([...updatedMessages]);
 
     try {
       const response = await chatService.sendMessage(spaceId, currentInput, aiModel);
       
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
+      // Ajouter la réponse IA au store
+      spaceStore.addMessage(spaceId, {
         content: response.message,
         type: 'ai',
-        timestamp: new Date(),
-        sources: response.sources,
-      };
-      
-      setMessages(prev => [...prev, aiMessage]);
+        userId: 'ai',
+        sources: response.sources
+      });
+
+      // Mettre à jour l'état local avec tous les messages
+      const finalMessages = spaceStore.getMessages(spaceId);
+      setMessages([...finalMessages]);
       
       toast({
         title: t("chat.responseGenerated"),

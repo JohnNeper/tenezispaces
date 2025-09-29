@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,11 +18,16 @@ import {
   Microscope,
   Palette,
   Code,
-  TrendingUp
+  TrendingUp,
+  Bot,
+  Clock
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { spaceStore, type Space } from "@/stores/spaceStore";
+import workspaceBg from "@/assets/workspace-bg.jpg";
 
 const categories = [
   { id: "all", name: "All Categories", icon: Globe },
@@ -100,24 +105,63 @@ const mockPublicSpaces = [
 export default function DiscoverSpaces() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [filteredSpaces, setFilteredSpaces] = useState<Space[]>([]);
   const { t } = useLanguage();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const filteredSpaces = mockPublicSpaces.filter(space => {
-    const matchesSearch = space.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         space.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         space.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+  useEffect(() => {
+    // Charger les spaces publics depuis le store
+    const publicSpaces = spaceStore.getPublicSpaces();
+    setSpaces(publicSpaces);
+    setFilteredSpaces(publicSpaces);
+  }, []);
+
+  useEffect(() => {
+    // Filtrer les spaces selon les critères
+    let filtered = spaces.filter(space => {
+      const matchesSearch = space.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           space.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           space.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const matchesCategory = selectedCategory === "all" || space.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
     
-    const matchesCategory = selectedCategory === "all" || space.category === selectedCategory;
-    
-    return matchesSearch && matchesCategory;
-  });
+    setFilteredSpaces(filtered);
+  }, [searchQuery, selectedCategory, spaces]);
 
   const handleJoinSpace = (spaceId: string) => {
-    toast({
-      title: t("spaces.joinSuccess"),
-      description: "You can now access this space from your dashboard",
-    });
+    if (!user) return;
+    
+    const space = spaceStore.getSpaceById(spaceId);
+    if (!space) return;
+    
+    // Vérifier si l'utilisateur est déjà membre
+    const isAlreadyMember = space.members.some(member => member.id === user.id);
+    if (isAlreadyMember) {
+      navigate(`/spaces/${spaceId}`);
+      return;
+    }
+    
+    const success = spaceStore.joinSpace(spaceId, user.id, user.name);
+    if (success) {
+      toast({
+        title: t("join.success"),
+        description: t("join.welcomeToSpace", { spaceName: space.name }),
+      });
+      // Recharger les spaces pour refléter les changements
+      const updatedSpaces = spaceStore.getPublicSpaces();
+      setSpaces(updatedSpaces);
+      navigate(`/spaces/${spaceId}`);
+    }
+  };
+
+  const isUserMember = (space: Space) => {
+    return user && space.members.some(member => member.id === user.id);
   };
 
   return (
@@ -260,22 +304,26 @@ export default function DiscoverSpaces() {
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs flex items-center gap-1">
+                        <Bot className="w-3 h-3" />
                         {space.aiModel}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">{space.lastActivity}</span>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {space.lastActivity.toLocaleDateString()}
+                      </span>
                     </div>
                     
                     <Button 
                       className={`w-full ${
-                        space.isJoined 
+                        isUserMember(space) 
                           ? 'bg-muted text-muted-foreground' 
                           : 'bg-gradient-primary hover:shadow-glow'
                       } transition-all duration-300`}
-                      disabled={space.isJoined}
+                      disabled={isUserMember(space)}
                       onClick={() => handleJoinSpace(space.id)}
                     >
-                      {space.isJoined ? t("spaces.joined") : t("spaces.joinSpace")}
+                      {isUserMember(space) ? t("spaces.joined") : t("spaces.joinSpace")}
                     </Button>
                   </CardContent>
                 </Card>
