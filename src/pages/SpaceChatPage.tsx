@@ -45,12 +45,12 @@ export default function SpaceChatPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-subtle flex">
-      {/* Left Sidebar - Spaces List */}
+    <div className="h-screen flex overflow-hidden bg-gradient-subtle">
+      {/* Sidebar gauche - Liste des spaces */}
       <SpacesSidebar />
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      
+      {/* Centre - Chat */}
+      <div className="flex-1 flex flex-col min-w-0">
         <SpaceChat
           spaceId={mockSpace.id}
           spaceName={mockSpace.name}
@@ -58,8 +58,8 @@ export default function SpaceChatPage() {
           documents={mockDocuments}
         />
       </div>
-
-      {/* Right Sidebar - Space Details */}
+      
+      {/* Sidebar droite - Détails du space */}
       <SpaceDetailsSidebar
         space={mockSpace}
         documents={mockDocuments}
