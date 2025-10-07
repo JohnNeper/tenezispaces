@@ -13,9 +13,9 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
-  socialAuth: (provider: 'google' | 'apple') => Promise<void>;
+  login: (email: string, password: string, redirectTo?: string) => Promise<void>;
+  signup: (name: string, email: string, password: string, redirectTo?: string) => Promise<void>;
+  socialAuth: (provider: 'google' | 'apple', redirectTo?: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
   isLoading: boolean;
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, redirectTo?: string) => {
     setLoading(true);
     
     try {
@@ -72,8 +72,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(mockUser);
       localStorage.setItem('tenezis_user', JSON.stringify(mockUser));
       
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Redirect to intended destination or default to home
+      navigate(redirectTo || '/');
     } catch (error) {
       throw new Error('Erreur de connexion');
     } finally {
@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const signup = async (name: string, email: string, password: string) => {
+  const signup = async (name: string, email: string, password: string, redirectTo?: string) => {
     setLoading(true);
     
     try {
@@ -100,8 +100,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(mockUser);
       localStorage.setItem('tenezis_user', JSON.stringify(mockUser));
       
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Redirect to intended destination or default to home
+      navigate(redirectTo || '/');
     } catch (error) {
       throw new Error('Erreur lors de la création du compte');
     } finally {
@@ -109,7 +109,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const socialAuth = async (provider: 'google' | 'apple') => {
+  const socialAuth = async (provider: 'google' | 'apple', redirectTo?: string) => {
     setLoading(true);
     
     try {
@@ -128,7 +128,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(mockUser);
       localStorage.setItem('tenezis_user', JSON.stringify(mockUser));
       
-      navigate('/dashboard');
+      // Redirect to intended destination or default to home
+      navigate(redirectTo || '/');
     } catch (error) {
       throw new Error(`Erreur de connexion ${provider}`);
     } finally {

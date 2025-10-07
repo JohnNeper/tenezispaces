@@ -144,6 +144,8 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
 
   const handleJoinSpace = (spaceId: string) => {
     if (!isAuthenticated) {
+      // Store intended destination
+      sessionStorage.setItem('redirectAfterLogin', `/spaces/join/${spaceId}`);
       onJoinClick?.();
       return;
     }

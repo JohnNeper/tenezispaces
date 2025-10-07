@@ -1,28 +1,40 @@
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface SocialAuthButtonsProps {
   mode: 'login' | 'signup';
+  redirectTo?: string;
   onSuccess?: () => void;
 }
 
-export function SocialAuthButtons({ mode, onSuccess }: SocialAuthButtonsProps) {
+export function SocialAuthButtons({ mode, redirectTo, onSuccess }: SocialAuthButtonsProps) {
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const { toast } = useToast();
+  const { socialAuth } = useAuth();
+  const { t } = useLanguage();
 
   const handleSocialAuth = async (provider: 'google' | 'apple') => {
     setLoadingProvider(provider);
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoadingProvider(null);
+    try {
+      await socialAuth(provider, redirectTo);
       toast({
-        title: `${mode === 'login' ? 'Connexion' : 'Inscription'} réussie!`,
-        description: `Vous êtes connecté via ${provider === 'google' ? 'Google' : 'Apple'}.`,
+        title: t('auth.success'),
+        description: t('auth.welcomeBack'),
       });
       onSuccess?.();
-    }, 1500);
+    } catch (error) {
+      toast({
+        title: t('auth.error'),
+        description: t('auth.tryAgain'),
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingProvider(null);
+    }
   };
 
   return (
@@ -33,7 +45,7 @@ export function SocialAuthButtons({ mode, onSuccess }: SocialAuthButtonsProps) {
         </div>
         <div className="relative flex justify-center text-xs uppercase">
           <span className="bg-background px-2 text-muted-foreground">
-            Ou {mode === 'login' ? 'connectez-vous' : 'inscrivez-vous'} avec
+            {t('auth.orContinueWith')}
           </span>
         </div>
       </div>

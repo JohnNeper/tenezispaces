@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Sparkles, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import DiscoverSpaces from "./DiscoverSpaces";
+import { SocialAuthButtons } from "@/components/SocialAuthButtons";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -27,7 +28,9 @@ export default function Index() {
     setAuthLoading(true);
     
     try {
-      await login(formData.email, formData.password);
+      const redirectTo = sessionStorage.getItem('redirectAfterLogin');
+      await login(formData.email, formData.password, redirectTo || undefined);
+      sessionStorage.removeItem('redirectAfterLogin');
       setShowAuthDialog(false);
     } catch (error) {
       console.error('Login error:', error);
@@ -41,7 +44,9 @@ export default function Index() {
     setAuthLoading(true);
     
     try {
-      await signup(formData.email, formData.password, formData.name);
+      const redirectTo = sessionStorage.getItem('redirectAfterLogin');
+      await signup(formData.name, formData.email, formData.password, redirectTo || undefined);
+      sessionStorage.removeItem('redirectAfterLogin');
       setShowAuthDialog(false);
     } catch (error) {
       console.error('Signup error:', error);
@@ -63,43 +68,19 @@ export default function Index() {
           </div>
           
           <div className="flex items-center space-x-3">
-            {isAuthenticated ? (
-              <>
-                <Link to="/dashboard">
-                  <Button variant="ghost" className="font-medium">
-                    Dashboard
-                  </Button>
-                </Link>
-                <Link to="/spaces/create">
-                  <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Créer un Space
-                  </Button>
-                </Link>
-              </>
-            ) : (
-              <>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => {
-                    setActiveTab('login');
-                    setShowAuthDialog(true);
-                  }}
-                  className="font-medium"
-                >
-                  Connexion
+            {isAuthenticated && (
+              <Link to="/dashboard">
+                <Button variant="ghost" className="font-medium">
+                  Dashboard
                 </Button>
-                <Button 
-                  onClick={() => {
-                    setActiveTab('signup');
-                    setShowAuthDialog(true);
-                  }}
-                  className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-                >
-                  S'inscrire
-                </Button>
-              </>
+              </Link>
             )}
+            <Link to="/spaces/create">
+              <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
+                <Plus className="w-4 h-4 mr-2" />
+                Créer un Space
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -125,6 +106,8 @@ export default function Index() {
             </TabsList>
             
             <TabsContent value="login" className="space-y-4 mt-6">
+              <SocialAuthButtons mode="login" onSuccess={() => setShowAuthDialog(false)} />
+              
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
@@ -165,6 +148,8 @@ export default function Index() {
             </TabsContent>
             
             <TabsContent value="signup" className="space-y-4 mt-6">
+              <SocialAuthButtons mode="signup" onSuccess={() => setShowAuthDialog(false)} />
+              
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Nom complet</Label>
