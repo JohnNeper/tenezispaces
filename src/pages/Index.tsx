@@ -10,6 +10,7 @@ import { Plus, Sparkles, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import DiscoverSpaces from "./DiscoverSpaces";
 import { SocialAuthButtons } from "@/components/SocialAuthButtons";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -68,6 +69,7 @@ export default function Index() {
           </div>
           
           <div className="flex items-center space-x-3">
+            <LanguageSelector />
             {isAuthenticated && (
               <Link to="/dashboard">
                 <Button variant="ghost" className="font-medium">
