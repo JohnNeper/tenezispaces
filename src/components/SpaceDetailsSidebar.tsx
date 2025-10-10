@@ -3,10 +3,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   FileText,
   Users,
@@ -18,7 +26,10 @@ import {
   Plus,
   X,
   File,
-  Loader2
+  Loader2,
+  Copy,
+  Mail,
+  Link as LinkIcon
 } from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -53,8 +64,14 @@ export function SpaceDetailsSidebar({ space, documents, members, onShare }: Spac
   const [activeTab, setActiveTab] = useState("info");
   const [showSettings, setShowSettings] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("member");
+  const [spaceName, setSpaceName] = useState(space.name);
+  const [spaceDescription, setSpaceDescription] = useState(space.description);
+  const [spaceVisibility, setSpaceVisibility] = useState<'public' | 'private'>(space.visibility);
   const { t } = useLanguage();
   const { toast } = useToast();
 
@@ -86,6 +103,37 @@ export function SpaceDetailsSidebar({ space, documents, members, onShare }: Spac
     setUploadFiles(files => files.filter((_, i) => i !== index));
   };
 
+  const handleShareLink = () => {
+    const shareLink = `${window.location.origin}/spaces/join/${space.id}`;
+    navigator.clipboard.writeText(shareLink);
+    toast({
+      title: t("settings.linkCopied"),
+      description: t("settings.linkCopiedDesc"),
+    });
+  };
+
+  const handleInvite = () => {
+    if (!inviteEmail.trim()) return;
+    
+    // Simulate sending invite
+    toast({
+      title: t("settings.inviteSent"),
+      description: t("settings.inviteSentDesc", { email: inviteEmail }),
+    });
+    
+    setInviteEmail("");
+    setShowInvite(false);
+  };
+
+  const handleSaveSettings = () => {
+    // Simulate saving settings
+    toast({
+      title: t("settings.settingsUpdated"),
+      description: t("settings.settingsUpdatedDesc"),
+    });
+    setShowSettings(false);
+  };
+
   return (
     <div className="w-80 border-l border-border/50 bg-background/50 backdrop-blur-sm flex flex-col h-full">
       {/* Header */}
@@ -102,13 +150,65 @@ export function SpaceDetailsSidebar({ space, documents, members, onShare }: Spac
           </Badge>
         </div>
         <div className="flex items-center gap-2 mt-3">
-          <Button variant="outline" size="sm" onClick={() => setShowSettings(true)} className="flex-1">
-            <Settings className="w-3 h-3 mr-1" />
-            Paramètres
-          </Button>
-          <Button variant="outline" size="sm" onClick={onShare} className="flex-1">
+          <Dialog open={showSettings} onOpenChange={setShowSettings}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="flex-1">
+                <Settings className="w-3 h-3 mr-1" />
+                {t("chat.settings")}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>{t("spaces.settings.title")}</DialogTitle>
+                <DialogDescription>
+                  {t("settings.settingsUpdatedDesc")}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="space-name">{t("spaces.name")}</Label>
+                  <Input
+                    id="space-name"
+                    value={spaceName}
+                    onChange={(e) => setSpaceName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="space-description">{t("spaces.description")}</Label>
+                  <Textarea
+                    id="space-description"
+                    value={spaceDescription}
+                    onChange={(e) => setSpaceDescription(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t("settings.visibility")}</Label>
+                  <Select value={spaceVisibility} onValueChange={(value: 'public' | 'private') => setSpaceVisibility(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="public">{t("spaces.public")}</SelectItem>
+                      <SelectItem value="private">{t("spaces.private")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowSettings(false)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button onClick={handleSaveSettings} className="bg-gradient-primary">
+                  {t("common.save")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Button variant="outline" size="sm" onClick={handleShareLink} className="flex-1">
             <Share2 className="w-3 h-3 mr-1" />
-            Partager
+            {t("common.share")}
           </Button>
         </div>
       </div>
@@ -310,12 +410,71 @@ export function SpaceDetailsSidebar({ space, documents, members, onShare }: Spac
             <TabsContent value="members" className="mt-0 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-medium text-foreground">
-                  {members.length} membre(s)
+                  {members.length} {t("chat.members")}
                 </h4>
-                <Button size="sm" variant="outline">
-                  <Plus className="w-3 h-3 mr-1" />
-                  Inviter
-                </Button>
+                <Dialog open={showInvite} onOpenChange={setShowInvite}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      <Plus className="w-3 h-3 mr-1" />
+                      {t("chat.invite")}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>{t("spaces.settings.invite")}</DialogTitle>
+                      <DialogDescription>
+                        {t("spaces.settings.inviteLink")}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="invite-email">{t("auth.email")}</Label>
+                        <Input
+                          id="invite-email"
+                          type="email"
+                          placeholder="email@example.com"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("spaces.settings.permissions")}</Label>
+                        <Select value={inviteRole} onValueChange={setInviteRole}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="member">{t("spaces.member")}</SelectItem>
+                            <SelectItem value="collaborator">{t("spaces.collaborator")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Separator />
+                      <div className="space-y-2">
+                        <Label>{t("settings.shareSpace")}</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            readOnly
+                            value={`${window.location.origin}/spaces/join/${space.id}`}
+                            className="flex-1"
+                          />
+                          <Button size="icon" variant="outline" onClick={handleShareLink}>
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setShowInvite(false)}>
+                        {t("common.cancel")}
+                      </Button>
+                      <Button onClick={handleInvite} disabled={!inviteEmail.trim()} className="bg-gradient-primary">
+                        <Mail className="w-4 h-4 mr-2" />
+                        {t("chat.invite")}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               <div className="space-y-2">

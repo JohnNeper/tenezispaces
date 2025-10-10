@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Search, 
   Users, 
@@ -22,18 +22,26 @@ import {
   Briefcase,
   GraduationCap
 } from "lucide-react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import { spaceStore } from "@/stores/spaceStore";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 
 const categories = [
-  { id: 'research', name: 'Recherche', icon: Microscope },
-  { id: 'tech', name: 'Technologie', icon: Code },
-  { id: 'design', name: 'Design', icon: Palette },
-  { id: 'business', name: 'Business', icon: Briefcase },
-  { id: 'marketing', name: 'Marketing', icon: TrendingUp },
-  { id: 'education', name: 'Éducation', icon: GraduationCap },
-  { id: 'docs', name: 'Documentation', icon: BookOpen },
+  { id: 'research', name: { fr: 'Recherche', en: 'Research' }, icon: Microscope },
+  { id: 'tech', name: { fr: 'Technologie', en: 'Technology' }, icon: Code },
+  { id: 'design', name: { fr: 'Design', en: 'Design' }, icon: Palette },
+  { id: 'business', name: { fr: 'Business', en: 'Business' }, icon: Briefcase },
+  { id: 'marketing', name: { fr: 'Marketing', en: 'Marketing' }, icon: TrendingUp },
+  { id: 'education', name: { fr: 'Éducation', en: 'Education' }, icon: GraduationCap },
+  { id: 'docs', name: { fr: 'Documentation', en: 'Documentation' }, icon: BookOpen },
 ];
 
 // Mock public spaces
@@ -119,6 +127,7 @@ interface DiscoverSpacesProps {
 export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { t, currentLanguage } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [spaces, setSpaces] = useState<typeof mockPublicSpaces>(mockPublicSpaces);
@@ -145,12 +154,14 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
   const handleJoinSpace = (spaceId: string) => {
     if (!isAuthenticated) {
       // Store intended destination
-      sessionStorage.setItem('redirectAfterLogin', `/spaces/join/${spaceId}`);
+      sessionStorage.setItem('redirectAfterLogin', `/spaces/${spaceId}`);
       onJoinClick?.();
       return;
     }
     
-    navigate(`/spaces/join/${spaceId}`);
+    // Redirect directly to space chat
+    navigate(`/spaces/${spaceId}`);
+    toast.success(t("spaces.joinSuccess"));
   };
 
   return (
@@ -161,13 +172,13 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
           <div className="text-center space-y-4 mb-8">
             <Badge variant="secondary" className="mb-2 bg-white/20 text-white border-white/30">
               <Globe className="w-3 h-3 mr-1" />
-              Explorer les Espaces Publics
+              {t("discover.explorePublic")}
             </Badge>
             <h1 className="text-4xl md:text-5xl font-bold text-white">
-              Rejoignez des Espaces de Collaboration
+              {t("discover.joinSpaces")}
             </h1>
             <p className="text-white/90 text-lg max-w-2xl mx-auto">
-              Découvrez des espaces de travail collaboratifs alimentés par l'IA pour la recherche, l'analyse et le partage de connaissances
+              {t("discover.description")}
             </p>
           </div>
 
@@ -176,7 +187,7 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/70" />
             <Input
               type="search"
-              placeholder="Rechercher des spaces par nom, catégorie, ou tags..."
+              placeholder={t("discover.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-12 h-14 bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:bg-white/15 focus:border-white/40 backdrop-blur-sm"
@@ -185,50 +196,65 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
         </div>
       </div>
 
-      {/* Categories Filter */}
-      <div className="bg-background/80 backdrop-blur-md border-b border-border/50 sticky top-16 z-40">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            <Button
-              variant={selectedCategory === null ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setSelectedCategory(null)}
-              className={selectedCategory === null ? "bg-gradient-primary shrink-0" : "shrink-0"}
-            >
-              <Target className="w-4 h-4 mr-2" />
-              Tous
-            </Button>
-            {categories.map((category) => {
-              const Icon = category.icon;
-              return (
-                <Button
-                  key={category.id}
-                  variant={selectedCategory === category.id ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={selectedCategory === category.id ? "bg-gradient-primary shrink-0" : "shrink-0"}
-                >
-                  <Icon className="w-4 h-4 mr-2" />
-                  {category.name}
-                </Button>
-              );
-            })}
+      {/* Categories Filter - Carousel */}
+      <div className="bg-background/95 backdrop-blur-md border-b border-border/50 sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-6">
+          <div className="text-center mb-4">
+            <h2 className="text-xl font-semibold text-foreground mb-1">
+              {filteredSpaces.length} {t("discover.spacesAvailable")}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {selectedCategory 
+                ? `${t("spaces.category")}: ${categories.find(c => c.id === selectedCategory)?.name[currentLanguage.code as 'fr' | 'en'] || categories.find(c => c.id === selectedCategory)?.name.en}`
+                : t("spaces.allCategories")
+              }
+            </p>
           </div>
+          
+          <Carousel
+            opts={{
+              align: "center",
+              loop: true,
+            }}
+            className="w-full max-w-4xl mx-auto"
+          >
+            <CarouselContent className="-ml-2 md:-ml-4">
+              <CarouselItem className="pl-2 md:pl-4 basis-auto">
+                <Button
+                  variant={selectedCategory === null ? "default" : "outline"}
+                  size="lg"
+                  onClick={() => setSelectedCategory(null)}
+                  className={selectedCategory === null ? "bg-gradient-primary shadow-glow" : ""}
+                >
+                  <Target className="w-4 h-4 mr-2" />
+                  {t("discover.all")}
+                </Button>
+              </CarouselItem>
+              {categories.map((category) => {
+                const Icon = category.icon;
+                return (
+                  <CarouselItem key={category.id} className="pl-2 md:pl-4 basis-auto">
+                    <Button
+                      variant={selectedCategory === category.id ? "default" : "outline"}
+                      size="lg"
+                      onClick={() => setSelectedCategory(category.id)}
+                      className={selectedCategory === category.id ? "bg-gradient-primary shadow-glow" : ""}
+                    >
+                      <Icon className="w-4 h-4 mr-2" />
+                      {category.name[currentLanguage.code as 'fr' | 'en'] || category.name.en}
+                    </Button>
+                  </CarouselItem>
+                );
+              })}
+            </CarouselContent>
+            <CarouselPrevious className="hidden md:flex" />
+            <CarouselNext className="hidden md:flex" />
+          </Carousel>
         </div>
       </div>
 
       {/* Spaces Grid */}
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">
-              {filteredSpaces.length} Space{filteredSpaces.length > 1 ? 's' : ''} disponible{filteredSpaces.length > 1 ? 's' : ''}
-            </h2>
-            <p className="text-muted-foreground">
-              {selectedCategory ? `Catégorie: ${categories.find(c => c.id === selectedCategory)?.name}` : 'Toutes les catégories'}
-            </p>
-          </div>
-        </div>
 
         {filteredSpaces.length === 0 ? (
           <Card className="max-w-lg mx-auto shadow-elegant border-border/50 bg-gradient-card">
@@ -237,37 +263,50 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
                 <Search className="w-8 h-8 text-primary" />
               </div>
               <h3 className="font-semibold text-lg text-foreground mb-2">
-                Aucun space trouvé
+                {t("discover.noSpaces")}
               </h3>
               <p className="text-muted-foreground mb-4">
-                Essayez d'ajuster vos filtres ou votre recherche
+                {t("discover.tryAdjusting")}
               </p>
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredSpaces.map((space) => (
-              <Card key={space.id} className="shadow-elegant border-border/50 hover:shadow-glow transition-all duration-300 bg-gradient-card">
+              <Card key={space.id} className="group shadow-elegant border-border/50 hover:shadow-glow transition-all duration-300 bg-gradient-card overflow-hidden">
                 <CardHeader>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-lg shadow-glow">
-                      {space.name.charAt(0)}
-                    </div>
-                    <Badge variant={space.visibility === 'public' ? 'default' : 'secondary'} className="text-xs">
-                      {space.visibility === 'public' ? (
-                        <>
-                          <Globe className="w-3 h-3 mr-1" />
-                          Public
-                        </>
+                  <div className="flex items-start gap-4 mb-3">
+                    {/* Space Avatar/Image */}
+                    <div className="relative">
+                      {space.owner.avatar ? (
+                        <Avatar className="w-16 h-16 border-2 border-primary/20">
+                          <AvatarImage src={space.owner.avatar} alt={space.name} />
+                          <AvatarFallback className="bg-gradient-primary text-primary-foreground font-bold text-xl">
+                            {space.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                       ) : (
-                        <>
-                          <Lock className="w-3 h-3 mr-1" />
-                          Privé
-                        </>
+                        <div className="w-16 h-16 bg-gradient-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-2xl shadow-glow border-2 border-primary/20">
+                          {space.name.charAt(0).toUpperCase()}
+                        </div>
                       )}
-                    </Badge>
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-background rounded-full flex items-center justify-center border-2 border-border">
+                        {space.visibility === 'public' ? (
+                          <Globe className="w-3 h-3 text-primary" />
+                        ) : (
+                          <Lock className="w-3 h-3 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg line-clamp-1 mb-1">{space.name}</CardTitle>
+                      <Badge variant="secondary" className="text-xs">
+                        <Bot className="w-3 h-3 mr-1" />
+                        {space.aiModel}
+                      </Badge>
+                    </div>
                   </div>
-                  <CardTitle className="text-lg line-clamp-1">{space.name}</CardTitle>
                   <CardDescription className="line-clamp-2">{space.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -290,10 +329,6 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
                       <FileText className="w-3 h-3" />
                       <span>{space.stats.documents}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Bot className="w-3 h-3" />
-                      <span>{space.aiModel}</span>
-                    </div>
                   </div>
 
                   {/* Owner */}
@@ -303,16 +338,23 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
                         {space.owner.name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-xs text-muted-foreground">{space.owner.name}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs text-muted-foreground truncate block">
+                        {space.owner.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground/70">
+                        {space.lastActivity}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Join Button */}
                   <Button 
-                    className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                    className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300 group-hover:scale-105"
                     onClick={() => handleJoinSpace(space.id)}
                   >
                     <Sparkles className="w-4 h-4 mr-2" />
-                    Rejoindre le Space
+                    {t("discover.joinSpace")}
                   </Button>
                 </CardContent>
               </Card>

@@ -1,11 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Send, 
   Bot, 
@@ -14,7 +22,8 @@ import {
   FileText, 
   Clock,
   RotateCcw,
-  Eye
+  Eye,
+  MessageSquare
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useToast } from "@/hooks/use-toast";
@@ -34,12 +43,23 @@ interface SpaceChatProps {
 
 export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [teamMessages, setTeamMessages] = useState<Array<{id: string; userId: string; userName: string; content: string; timestamp: Date}>>([]);
   const [input, setInput] = useState("");
+  const [teamInput, setTeamInput] = useState("");
+  const [selectedModel, setSelectedModel] = useState(aiModel);
   const [isLoading, setIsLoading] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const teamMessagesEndRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
   const { toast } = useToast();
+
+  const aiModels = [
+    { id: "GPT-5", name: "GPT-5" },
+    { id: "Claude Sonnet-4", name: "Claude Sonnet-4" },
+    { id: "GPT-4", name: "GPT-4" },
+    { id: "Gemini Pro", name: "Gemini Pro" },
+  ];
 
   // Mettre à jour les messages existants avec le spaceStore
   useEffect(() => {
@@ -53,9 +73,17 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const scrollTeamToBottom = () => {
+    teamMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    scrollTeamToBottom();
+  }, [teamMessages]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -78,7 +106,7 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
     setMessages([...updatedMessages]);
 
     try {
-      const response = await chatService.sendMessage(spaceId, currentInput, aiModel);
+      const response = await chatService.sendMessage(spaceId, currentInput, selectedModel);
       
       // Ajouter la réponse IA au store
       spaceStore.addMessage(spaceId, {
@@ -119,10 +147,40 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
     setMessages([]);
   };
 
+  const handleSendTeamMessage = () => {
+    if (!teamInput.trim()) return;
+    
+    const userName = localStorage.getItem('tenezis_user') 
+      ? JSON.parse(localStorage.getItem('tenezis_user')!).name 
+      : 'Utilisateur';
+    
+    const newMessage = {
+      id: Date.now().toString(),
+      userId: '1',
+      userName,
+      content: teamInput.trim(),
+      timestamp: new Date()
+    };
+    
+    setTeamMessages(prev => [...prev, newMessage]);
+    setTeamInput("");
+    toast({
+      title: t("chat.messageSent"),
+      description: t("chat.teamMessageSent"),
+    });
+  };
+
+  const handleTeamKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendTeamMessage();
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header */}
-      <div className="border-b border-border p-4 bg-background/80 backdrop-blur-md">
+      <div className="border-b border-border p-4 bg-background/95 backdrop-blur-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold shadow-glow">
@@ -133,11 +191,11 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">
                   <Bot className="w-3 h-3 mr-1" />
-                  {aiModel}
+                  {selectedModel}
                 </Badge>
                 <Badge variant="secondary" className="text-xs">
                   <FileText className="w-3 h-3 mr-1" />
-                  {documents.length} docs
+                  {documents.length} {t("chat.documents")}
                 </Badge>
               </div>
             </div>
@@ -156,11 +214,11 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-6">
+      <ScrollArea className="flex-1 p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
           {messages.length === 0 && (
             <Card className="border-border/50 bg-gradient-card">
-              <CardContent className="p-6 text-center space-y-4">
+              <CardContent className="p-8 text-center space-y-4">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
                   <Sparkles className="w-8 h-8 text-primary" />
                 </div>
@@ -178,48 +236,42 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
 
           {messages.map((message) => (
             <div key={message.id} className="flex gap-3 animate-fade-in">
-              <Avatar className="w-8 h-8 flex-shrink-0">
+              <Avatar className="w-9 h-9 flex-shrink-0">
                 {message.type === 'user' ? (
-                  <>
-                    <AvatarFallback>
-                      <User className="w-4 h-4" />
-                    </AvatarFallback>
-                  </>
+                  <AvatarFallback className="bg-primary/10">
+                    <User className="w-4 h-4 text-primary" />
+                  </AvatarFallback>
                 ) : (
-                  <>
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      <Bot className="w-4 h-4" />
-                    </AvatarFallback>
-                  </>
+                  <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                    <Bot className="w-4 h-4" />
+                  </AvatarFallback>
                 )}
               </Avatar>
               
-              <div className="flex-1 space-y-2">
-                 <div className="flex items-center gap-2">
-                   <span className="text-sm font-medium text-foreground">
-                     {message.type === 'user' ? 'Vous' : aiModel}
-                   </span>
+              <div className="flex-1 space-y-2 max-w-3xl">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">
+                    {message.type === 'user' ? t("dashboard.you") : selectedModel}
+                  </span>
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {message.timestamp.toLocaleTimeString()}
                   </span>
                 </div>
                 
-                <Card className={`${
+                <div className={`rounded-2xl px-4 py-3 ${
                   message.type === 'user' 
-                    ? 'bg-primary/5 border-primary/20' 
-                    : 'bg-muted/30 border-border/50'
+                    ? 'bg-primary/10 border border-primary/20' 
+                    : 'bg-muted/50'
                 }`}>
-                  <CardContent className="p-3">
-                    <p className="text-foreground whitespace-pre-wrap">
-                      {message.content}
-                    </p>
-                  </CardContent>
-                </Card>
+                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                    {message.content}
+                  </p>
+                </div>
                 
                 {message.sources && (
-                  <div className="space-y-2">
-                    <span className="text-xs text-muted-foreground">{t("chat.sources")}</span>
+                  <div className="space-y-2 pl-1">
+                    <span className="text-xs font-medium text-muted-foreground">{t("chat.sources")}</span>
                     <div className="flex flex-wrap gap-2">
                       {message.sources.map((source) => (
                         <Badge 
@@ -231,7 +283,7 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
                             if (doc) {
                               setPreviewDocument({
                                 ...doc,
-                                size: "2.3 MB" // Mock size
+                                size: "2.3 MB"
                               });
                             }
                           }}
@@ -250,22 +302,20 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
 
           {isLoading && (
             <div className="flex gap-3 animate-fade-in">
-              <Avatar className="w-8 h-8 flex-shrink-0">
-                <AvatarFallback className="bg-primary text-primary-foreground">
+              <Avatar className="w-9 h-9 flex-shrink-0">
+                <AvatarFallback className="bg-gradient-primary text-primary-foreground">
                   <Bot className="w-4 h-4" />
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <Card className="bg-muted/30 border-border/50">
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
-                      <span className="text-sm">{t("chat.thinking")}</span>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="flex-1 max-w-3xl">
+                <div className="rounded-2xl px-4 py-3 bg-muted/50">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                    <span className="text-sm">{t("chat.thinking")}</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -275,23 +325,109 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
       </ScrollArea>
 
       {/* Input */}
-      <div className="border-t border-border p-4 bg-background/80 backdrop-blur-md">
-        <div className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={t("chat.placeholder")}
-            disabled={isLoading}
-            className="flex-1 border-border/50 focus:border-primary"
-          />
-          <Button 
-            onClick={handleSend} 
-            disabled={!input.trim() || isLoading}
-            className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
+      <div className="border-t border-border p-4 bg-background/95 backdrop-blur-md">
+        <div className="max-w-4xl mx-auto space-y-3">
+          <div className="flex items-center gap-2">
+            <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger className="w-48 h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {aiModels.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    <div className="flex items-center gap-2">
+                      <Bot className="w-3 h-3" />
+                      {model.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2 items-end">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder={t("chat.placeholder")}
+              disabled={isLoading}
+              className="flex-1 min-h-[60px] max-h-[120px] resize-none rounded-2xl"
+            />
+            <Button 
+              onClick={handleSend} 
+              disabled={!input.trim() || isLoading}
+              size="lg"
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-[60px] px-6"
+            >
+              <Send className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Team Collaboration Section */}
+      <div className="border-t-2 border-border bg-muted/30">
+        <div className="p-4 border-b border-border bg-background/50">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold text-foreground">{t("chat.teamCollaboration")}</h3>
+            <Badge variant="secondary" className="ml-auto">
+              {teamMessages.length} {t("chat.messages")}
+            </Badge>
+          </div>
+        </div>
+        
+        <ScrollArea className="h-64">
+          <div className="p-4 space-y-3">
+            {teamMessages.length === 0 ? (
+              <div className="text-center py-8">
+                <MessageSquare className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">{t("chat.noTeamMessages")}</p>
+              </div>
+            ) : (
+              teamMessages.map((msg) => (
+                <div key={msg.id} className="flex gap-2 animate-fade-in">
+                  <Avatar className="w-7 h-7">
+                    <AvatarFallback className="text-xs bg-primary/10">
+                      {msg.userName.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium">{msg.userName}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {msg.timestamp.toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground bg-background rounded-lg px-3 py-2">
+                      {msg.content}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+            <div ref={teamMessagesEndRef} />
+          </div>
+        </ScrollArea>
+        
+        <div className="p-3 bg-background/80 border-t border-border">
+          <div className="flex gap-2">
+            <Input
+              value={teamInput}
+              onChange={(e) => setTeamInput(e.target.value)}
+              onKeyPress={handleTeamKeyPress}
+              placeholder={t("chat.teamPlaceholder")}
+              className="flex-1"
+            />
+            <Button 
+              onClick={handleSendTeamMessage}
+              disabled={!teamInput.trim()}
+              size="sm"
+              className="bg-gradient-primary"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
