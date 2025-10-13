@@ -249,7 +249,7 @@ export function SpaceDetailsSidebar({ space, documents, members, onShare }: Spac
                 <h4 className="text-sm font-medium text-foreground mb-2">Activité</h4>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="w-4 h-4" />
-                  <span>Dernière activité: {space.lastActivity}</span>
+                  <span>Dernière activité: {typeof space.lastActivity === 'string' ? space.lastActivity : new Date(space.lastActivity).toLocaleString()}</span>
                 </div>
               </div>
 
