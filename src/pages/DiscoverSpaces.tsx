@@ -343,7 +343,7 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
                         {space.owner.name}
                       </span>
                       <span className="text-xs text-muted-foreground/70">
-                        {space.lastActivity}
+                        {typeof space.lastActivity === 'string' ? space.lastActivity : new Date(space.lastActivity).toLocaleString()}
                       </span>
                     </div>
                   </div>

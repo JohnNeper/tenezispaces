@@ -255,7 +255,7 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
                   </span>
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    {message.timestamp.toLocaleTimeString()}
+                    {typeof message.timestamp === 'string' ? message.timestamp : message.timestamp.toLocaleTimeString()}
                   </span>
                 </div>
                 
@@ -396,7 +396,7 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium">{msg.userName}</span>
                       <span className="text-xs text-muted-foreground">
-                        {msg.timestamp.toLocaleTimeString()}
+                        {typeof msg.timestamp === 'string' ? msg.timestamp : msg.timestamp.toLocaleTimeString()}
                       </span>
                     </div>
                     <p className="text-sm text-foreground bg-background rounded-lg px-3 py-2">
