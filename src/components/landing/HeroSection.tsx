@@ -45,14 +45,14 @@ export const HeroSection = () => {
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Link to="/demo">
+              <Link to="/discover">
                 <Button 
                   variant="outline" 
                   size="lg" 
                   className="border-primary/20 hover:bg-primary/5 hover:scale-105 transition-all group text-lg px-8 py-6 w-full sm:w-auto"
                 >
                   <Play className="w-5 h-5 mr-2" />
-                  {t("landing.hero.demo")}
+                  {t("landing.hero.discover")}
                 </Button>
               </Link>
             </div>

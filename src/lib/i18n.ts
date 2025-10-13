@@ -295,6 +295,8 @@ const resources = {
       noSpaces: "No spaces found",
       tryAdjusting: "Try adjusting your filters or search",
       joinSpace: "Join Space",
+      featuredSpaces: "Featured Public Spaces",
+      exploreTopSpaces: "Explore our top community spaces and join the conversation",
     },
       
       // Settings
@@ -750,6 +752,20 @@ const resources = {
       "auth.nameRequired": "Le nom doit contenir au moins 2 caractères",
       "auth.passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères",
       "auth.passwordMismatch": "Les mots de passe ne correspondent pas",
+      
+    discover: {
+      explorePublic: "Explorer les Espaces Publics",
+      joinSpaces: "Rejoindre des Espaces de Collaboration",
+      description: "Découvrez des espaces de travail collaboratifs alimentés par l'IA pour la recherche, l'analyse et le partage de connaissances",
+      searchPlaceholder: "Rechercher par nom, catégorie ou tags...",
+      all: "Tous",
+      spacesAvailable: "espaces disponibles",
+      noSpaces: "Aucun espace trouvé",
+      tryAdjusting: "Essayez d'ajuster vos filtres ou votre recherche",
+      joinSpace: "Rejoindre",
+      featuredSpaces: "Espaces Publics en Vedette",
+      exploreTopSpaces: "Explorez nos meilleurs espaces communautaires et rejoignez la conversation",
+    },
       
       // Dashboard
       "dashboard.welcome": "Bienvenue",

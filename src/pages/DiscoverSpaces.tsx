@@ -164,6 +164,21 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
     toast.success(t("spaces.joinSuccess"));
   };
 
+  const getSpaceColor = (name: string) => {
+    const colors = [
+      'from-blue-500 to-blue-600',
+      'from-purple-500 to-purple-600',
+      'from-pink-500 to-pink-600',
+      'from-green-500 to-green-600',
+      'from-yellow-500 to-yellow-600',
+      'from-red-500 to-red-600',
+      'from-indigo-500 to-indigo-600',
+      'from-teal-500 to-teal-600',
+    ];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -253,8 +268,16 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
         </div>
       </div>
 
-      {/* Spaces Grid */}
+      {/* Spaces Carousel */}
       <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-foreground mb-2">
+            {t("discover.featuredSpaces")}
+          </h2>
+          <p className="text-muted-foreground">
+            {t("discover.exploreTopSpaces")}
+          </p>
+        </div>
 
         {filteredSpaces.length === 0 ? (
           <Card className="max-w-lg mx-auto shadow-elegant border-border/50 bg-gradient-card">
@@ -271,95 +294,104 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredSpaces.map((space) => (
-              <Card key={space.id} className="group shadow-elegant border-border/50 hover:shadow-glow transition-all duration-300 bg-gradient-card overflow-hidden">
-                <CardHeader>
-                  <div className="flex items-start gap-4 mb-3">
-                    {/* Space Avatar/Image */}
-                    <div className="relative">
-                      {space.owner.avatar ? (
-                        <Avatar className="w-16 h-16 border-2 border-primary/20">
-                          <AvatarImage src={space.owner.avatar} alt={space.name} />
-                          <AvatarFallback className="bg-gradient-primary text-primary-foreground font-bold text-xl">
-                            {space.name.charAt(0).toUpperCase()}
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-2 md:-ml-4">
+              {filteredSpaces.map((space) => (
+                <CarouselItem key={space.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
+                  <Card className="group shadow-elegant border-border/50 hover:shadow-glow transition-all duration-300 bg-gradient-card overflow-hidden h-full">
+                    <CardHeader>
+                      <div className="flex items-start gap-4 mb-3">
+                        {/* Space Image/Avatar */}
+                        <div className="relative">
+                          {space.owner.avatar ? (
+                            <div className="w-20 h-20 rounded-xl overflow-hidden shadow-elegant border-2 border-primary/20">
+                              <img src={space.owner.avatar} alt={space.name} className="w-full h-full object-cover" />
+                            </div>
+                          ) : (
+                            <div className={`w-20 h-20 bg-gradient-to-br ${getSpaceColor(space.name)} rounded-xl flex items-center justify-center text-white font-bold text-3xl shadow-glow border-2 border-primary/20`}>
+                              {space.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-background rounded-full flex items-center justify-center border-2 border-border">
+                            {space.visibility === 'public' ? (
+                              <Globe className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Lock className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg line-clamp-1 mb-1">{space.name}</CardTitle>
+                          <Badge variant="secondary" className="text-xs">
+                            <Bot className="w-3 h-3 mr-1" />
+                            {space.aiModel}
+                          </Badge>
+                        </div>
+                      </div>
+                      <CardDescription className="line-clamp-2">{space.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Tags */}
+                      <div className="flex flex-wrap gap-2">
+                        {space.tags.slice(0, 3).map((tag, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      {/* Stats */}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          <span>{space.stats.members}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <FileText className="w-3 h-3" />
+                          <span>{space.stats.documents}</span>
+                        </div>
+                      </div>
+
+                      {/* Owner */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                        <Avatar className="w-6 h-6">
+                          <AvatarFallback className="text-xs bg-muted">
+                            {space.owner.name.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                      ) : (
-                        <div className="w-16 h-16 bg-gradient-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-2xl shadow-glow border-2 border-primary/20">
-                          {space.name.charAt(0).toUpperCase()}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs text-muted-foreground truncate block">
+                            {space.owner.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground/70">
+                            {typeof space.lastActivity === 'string' ? space.lastActivity : new Date(space.lastActivity).toLocaleString()}
+                          </span>
                         </div>
-                      )}
-                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-background rounded-full flex items-center justify-center border-2 border-border">
-                        {space.visibility === 'public' ? (
-                          <Globe className="w-3 h-3 text-primary" />
-                        ) : (
-                          <Lock className="w-3 h-3 text-muted-foreground" />
-                        )}
                       </div>
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg line-clamp-1 mb-1">{space.name}</CardTitle>
-                      <Badge variant="secondary" className="text-xs">
-                        <Bot className="w-3 h-3 mr-1" />
-                        {space.aiModel}
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardDescription className="line-clamp-2">{space.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-2">
-                    {space.tags.slice(0, 3).map((tag, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
 
-                  {/* Stats */}
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      <span>{space.stats.members}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <FileText className="w-3 h-3" />
-                      <span>{space.stats.documents}</span>
-                    </div>
-                  </div>
-
-                  {/* Owner */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-                    <Avatar className="w-6 h-6">
-                      <AvatarFallback className="text-xs bg-muted">
-                        {space.owner.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs text-muted-foreground truncate block">
-                        {space.owner.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground/70">
-                        {typeof space.lastActivity === 'string' ? space.lastActivity : new Date(space.lastActivity).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Join Button */}
-                  <Button 
-                    className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300 group-hover:scale-105"
-                    onClick={() => handleJoinSpace(space.id)}
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    {t("discover.joinSpace")}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                      {/* Join Button */}
+                      <Button 
+                        className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300 group-hover:scale-105"
+                        onClick={() => handleJoinSpace(space.id)}
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        {t("discover.joinSpace")}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="hidden md:flex -left-12" />
+            <CarouselNext className="hidden md:flex -right-12" />
+          </Carousel>
         )}
       </div>
     </div>

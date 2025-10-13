@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import SpaceChatPage from "./pages/SpaceChatPage";
 import CreateSpaceEnhanced from "./pages/CreateSpaceEnhanced";
 import JoinSpace from "./pages/JoinSpace";
+import DiscoverSpaces from "./pages/DiscoverSpaces";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/discover" element={<DiscoverSpaces />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/spaces/create" element={<ProtectedRoute><CreateSpaceEnhanced /></ProtectedRoute>} />
             <Route path="/spaces/join/:spaceId" element={<JoinSpace />} />

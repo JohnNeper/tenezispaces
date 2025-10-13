@@ -40,10 +40,10 @@ export const Header = () => {
         {/* Navigation - Desktop */}
         <nav className="hidden lg:flex items-center space-x-1">
           <Link 
-            to="/spaces" 
+            to="/discover" 
             className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200"
           >
-            {t('nav.spaces')}
+            {t('nav.discover')}
           </Link>
           {isAuthenticated && (
             <>
@@ -56,7 +56,7 @@ export const Header = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="px-4 py-2 h-auto font-medium text-muted-foreground hover:text-foreground">
-                    Créer
+                    {t('nav.create')}
                     <ChevronDown className="w-4 h-4 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -64,13 +64,13 @@ export const Header = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/spaces/create" className="flex items-center">
                       <Plus className="w-4 h-4 mr-2" />
-                      Nouvel Espace
+                      {t('nav.newSpace')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/documents/upload" className="flex items-center">
                       <Plus className="w-4 h-4 mr-2" />
-                      Document
+                      {t('nav.document')}
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -127,19 +127,19 @@ export const Header = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="flex items-center">
                       <User className="w-4 h-4 mr-2" />
-                      Profil
+                      {t('nav.profile')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/settings" className="flex items-center">
                       <Settings className="w-4 h-4 mr-2" />
-                      Paramètres
+                      {t('nav.settings')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
                     <LogOut className="w-4 h-4 mr-2" />
-                    Se déconnecter
+                    {t('nav.logout')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -177,11 +177,11 @@ export const Header = () => {
         <div className="lg:hidden border-t border-border/50 bg-background/95 backdrop-blur-lg">
           <div className="container mx-auto px-4 py-4 space-y-2">
             <Link 
-              to="/spaces" 
+              to="/discover" 
               className="block px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
               onClick={() => setMobileMenuOpen(false)}
             >
-              {t('nav.spaces')}
+              {t('nav.discover')}
             </Link>
             {isAuthenticated && (
               <>

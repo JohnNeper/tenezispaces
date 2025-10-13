@@ -45,14 +45,36 @@ interface SpaceCardProps {
 }
 
 export const SpaceCard = ({ space }: SpaceCardProps) => {
+  // Generate a consistent color based on space name
+  const getSpaceColor = (name: string) => {
+    const colors = [
+      'from-blue-500 to-blue-600',
+      'from-purple-500 to-purple-600',
+      'from-pink-500 to-pink-600',
+      'from-green-500 to-green-600',
+      'from-yellow-500 to-yellow-600',
+      'from-red-500 to-red-600',
+      'from-indigo-500 to-indigo-600',
+      'from-teal-500 to-teal-600',
+    ];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
   return (
     <Card className="group hover:shadow-card transition-all duration-300 border-border/50 bg-gradient-card animate-fade-in">
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-lg shadow-glow">
-              {space.name.charAt(0).toUpperCase()}
-            </div>
+            {space.owner.avatar ? (
+              <div className="w-16 h-16 rounded-xl overflow-hidden shadow-elegant border-2 border-border/50">
+                <img src={space.owner.avatar} alt={space.name} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className={`w-16 h-16 bg-gradient-to-br ${getSpaceColor(space.name)} rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-glow`}>
+                {space.name.charAt(0).toUpperCase()}
+              </div>
+            )}
             <div>
               <CardTitle className="text-lg">{space.name}</CardTitle>
               <div className="flex items-center gap-2 mt-1">
