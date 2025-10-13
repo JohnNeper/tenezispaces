@@ -29,7 +29,9 @@ import {
   Loader2,
   Copy,
   Mail,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Send,
+  MessageSquare
 } from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -215,10 +217,11 @@ export function SpaceDetailsSidebar({ space, documents, members, onShare }: Spac
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-3 px-4 pt-2">
+        <TabsList className="grid w-full grid-cols-4 px-4 pt-2">
           <TabsTrigger value="info" className="text-xs">Info</TabsTrigger>
-          <TabsTrigger value="documents" className="text-xs">Documents</TabsTrigger>
-          <TabsTrigger value="members" className="text-xs">Équipe</TabsTrigger>
+          <TabsTrigger value="documents" className="text-xs">Docs</TabsTrigger>
+          <TabsTrigger value="members" className="text-xs">{t("chat.team")}</TabsTrigger>
+          <TabsTrigger value="chat" className="text-xs">{t("chat.collaboration")}</TabsTrigger>
         </TabsList>
 
         <ScrollArea className="flex-1">
@@ -495,6 +498,36 @@ export function SpaceDetailsSidebar({ space, documents, members, onShare }: Spac
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="chat" className="mt-0 space-y-3 flex flex-col h-full">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-foreground">{t("chat.teamChat")}</h4>
+                <Badge variant="secondary" className="text-xs">
+                  {t("chat.collaboration")}
+                </Badge>
+              </div>
+              
+              <ScrollArea className="flex-1 h-[300px]">
+                <div className="space-y-2 pr-2">
+                  <div className="text-center py-8">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">{t("chat.noTeamMessages")}</p>
+                  </div>
+                </div>
+              </ScrollArea>
+              
+              <div className="pt-2 border-t border-border">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={t("chat.teamPlaceholder")}
+                    className="flex-1"
+                  />
+                  <Button size="sm" className="bg-gradient-primary">
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </TabsContent>
           </div>

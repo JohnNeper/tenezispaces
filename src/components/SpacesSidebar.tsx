@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/hooks/useLanguage";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { spaceStore } from "@/stores/spaceStore";
 import { useState, useEffect } from "react";
 import logoGradient from "@/assets/logo-gradient.png";
@@ -37,7 +38,9 @@ export const SpacesSidebar = () => {
           </span>
         </Link>
         
-        <div className="relative">
+        <LanguageSelector />
+        
+        <div className="relative mt-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder={t("spaces.searchSpaces")}

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { UserProfile } from "@/components/UserProfile";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { AdvancedSearch } from "@/components/AdvancedSearch";
 import { FunctionalSpaceCard } from "@/components/FunctionalSpaceCard";
 import { useState } from "react";
@@ -137,6 +138,7 @@ const Dashboard = () => {
           </div>
 
           <div className="flex items-center space-x-4">
+            <LanguageSelector />
             <UserProfile user={user ? {
               name: user.name,
               email: user.email,

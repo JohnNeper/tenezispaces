@@ -24,6 +24,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useToast } from "@/hooks/use-toast";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 const categories = [
   { value: "research", label: "Research & Analysis", icon: "🔬" },
@@ -113,14 +114,17 @@ export default function CreateSpaceEnhanced() {
       {/* Header */}
       <header className="bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/spaces" className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors">
+          <Link to="/" className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-5 h-5" />
-            <span>Back to Spaces</span>
+            <span>{t("common.back")}</span>
           </Link>
           
-          <div className="flex items-center space-x-2">
-            <Sparkles className="w-6 h-6 text-primary" />
-            <span className="text-xl font-bold text-foreground">Create New Space</span>
+          <div className="flex items-center space-x-3">
+            <LanguageSelector />
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-6 h-6 text-primary" />
+              <span className="text-xl font-bold text-foreground">{t("spaces.createSpace")}</span>
+            </div>
           </div>
           
           <div className="w-32"></div>

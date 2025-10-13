@@ -277,6 +277,8 @@ const resources = {
       backToSpaces: "Back to spaces",
       spaceSettings: "Space settings",
       teamCollaboration: "Team Collaboration",
+      collaboration: "Collaboration",
+      teamChat: "Team Chat",
       messages: "messages",
       noTeamMessages: "No team messages yet. Start a conversation with your team!",
       teamPlaceholder: "Message your team...",
@@ -329,6 +331,7 @@ const resources = {
       "common.loading": "Loading...",
       "common.error": "Error",
       "common.success": "Success",
+      "common.back": "Back",
       
       // Authentication
       "auth.welcome": "Welcome back",
@@ -635,6 +638,8 @@ const resources = {
       "chat.documentPreview": "Aperçu du document",
       "chat.closePreview": "Fermer l'aperçu",
       "chat.teamCollaboration": "Collaboration d'Équipe",
+      "chat.collaboration": "Collaboration",
+      "chat.teamChat": "Discussion d'Équipe",
       "chat.messages": "messages",
       "chat.noTeamMessages": "Aucun message d'équipe pour le moment. Commencez une conversation avec votre équipe!",
       "chat.teamPlaceholder": "Message à votre équipe...",
@@ -686,6 +691,9 @@ const resources = {
       "org.invite": "Inviter des Membres", 
       "org.settings": "Paramètres",
       "org.stats": "Statistiques d'Utilisation",
+      
+      // Common
+      "common.save": "Sauvegarder",
       "common.cancel": "Annuler",
       "common.delete": "Supprimer",
       "common.edit": "Modifier",
@@ -694,6 +702,7 @@ const resources = {
       "common.loading": "Chargement...",
       "common.error": "Erreur",
       "common.success": "Succès",
+      "common.back": "Retour",
       
       // Authentication
       "auth.welcome": "Content de vous revoir",

@@ -43,14 +43,11 @@ interface SpaceChatProps {
 
 export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [teamMessages, setTeamMessages] = useState<Array<{id: string; userId: string; userName: string; content: string; timestamp: Date}>>([]);
   const [input, setInput] = useState("");
-  const [teamInput, setTeamInput] = useState("");
   const [selectedModel, setSelectedModel] = useState(aiModel);
   const [isLoading, setIsLoading] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const teamMessagesEndRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
   const { toast } = useToast();
 
@@ -73,17 +70,9 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const scrollTeamToBottom = () => {
-    teamMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  useEffect(() => {
-    scrollTeamToBottom();
-  }, [teamMessages]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -145,36 +134,6 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
 
   const startNewConversation = () => {
     setMessages([]);
-  };
-
-  const handleSendTeamMessage = () => {
-    if (!teamInput.trim()) return;
-    
-    const userName = localStorage.getItem('tenezis_user') 
-      ? JSON.parse(localStorage.getItem('tenezis_user')!).name 
-      : 'Utilisateur';
-    
-    const newMessage = {
-      id: Date.now().toString(),
-      userId: '1',
-      userName,
-      content: teamInput.trim(),
-      timestamp: new Date()
-    };
-    
-    setTeamMessages(prev => [...prev, newMessage]);
-    setTeamInput("");
-    toast({
-      title: t("chat.messageSent"),
-      description: t("chat.teamMessageSent"),
-    });
-  };
-
-  const handleTeamKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendTeamMessage();
-    }
   };
 
   return (
@@ -360,72 +319,6 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
               className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-[60px] px-6"
             >
               <Send className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Team Collaboration Section */}
-      <div className="border-t-2 border-border bg-muted/30">
-        <div className="p-4 border-b border-border bg-background/50">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-primary" />
-            <h3 className="font-semibold text-foreground">{t("chat.teamCollaboration")}</h3>
-            <Badge variant="secondary" className="ml-auto">
-              {teamMessages.length} {t("chat.messages")}
-            </Badge>
-          </div>
-        </div>
-        
-        <ScrollArea className="h-64">
-          <div className="p-4 space-y-3">
-            {teamMessages.length === 0 ? (
-              <div className="text-center py-8">
-                <MessageSquare className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">{t("chat.noTeamMessages")}</p>
-              </div>
-            ) : (
-              teamMessages.map((msg) => (
-                <div key={msg.id} className="flex gap-2 animate-fade-in">
-                  <Avatar className="w-7 h-7">
-                    <AvatarFallback className="text-xs bg-primary/10">
-                      {msg.userName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium">{msg.userName}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {typeof msg.timestamp === 'string' ? msg.timestamp : msg.timestamp.toLocaleTimeString()}
-                      </span>
-                    </div>
-                    <p className="text-sm text-foreground bg-background rounded-lg px-3 py-2">
-                      {msg.content}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-            <div ref={teamMessagesEndRef} />
-          </div>
-        </ScrollArea>
-        
-        <div className="p-3 bg-background/80 border-t border-border">
-          <div className="flex gap-2">
-            <Input
-              value={teamInput}
-              onChange={(e) => setTeamInput(e.target.value)}
-              onKeyPress={handleTeamKeyPress}
-              placeholder={t("chat.teamPlaceholder")}
-              className="flex-1"
-            />
-            <Button 
-              onClick={handleSendTeamMessage}
-              disabled={!teamInput.trim()}
-              size="sm"
-              className="bg-gradient-primary"
-            >
-              <Send className="w-4 h-4" />
             </Button>
           </div>
         </div>
