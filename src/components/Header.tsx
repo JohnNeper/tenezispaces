@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { CreateSpaceModal } from "@/components/CreateSpaceModal";
+import { DocumentUploadModal } from "@/components/DocumentUploadModal";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
@@ -23,6 +25,8 @@ export const Header = () => {
   const { t } = useLanguage();
   const { isAuthenticated, user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [createSpaceModalOpen, setCreateSpaceModalOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
   
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50">
@@ -61,17 +65,13 @@ export const Header = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="center" className="w-48">
-                  <DropdownMenuItem asChild>
-                    <Link to="/spaces/create" className="flex items-center">
-                      <Plus className="w-4 h-4 mr-2" />
-                      {t('nav.newSpace')}
-                    </Link>
+                  <DropdownMenuItem onClick={() => setCreateSpaceModalOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('nav.newSpace')}
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/documents/upload" className="flex items-center">
-                      <Plus className="w-4 h-4 mr-2" />
-                      {t('nav.document')}
-                    </Link>
+                  <DropdownMenuItem onClick={() => setUploadModalOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('nav.document')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -192,13 +192,15 @@ export const Header = () => {
                 >
                   {t('nav.dashboard')}
                 </Link>
-                <Link 
-                  to="/spaces/create" 
-                  className="block px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
-                  onClick={() => setMobileMenuOpen(false)}
+                <button
+                  className="block w-full text-left px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setCreateSpaceModalOpen(true);
+                  }}
                 >
                   {t('nav.create')}
-                </Link>
+                </button>
               </>
             )}
             {!isAuthenticated && (
@@ -213,6 +215,16 @@ export const Header = () => {
           </div>
         </div>
       )}
+
+      {/* Modals */}
+      <CreateSpaceModal 
+        open={createSpaceModalOpen} 
+        onOpenChange={setCreateSpaceModalOpen} 
+      />
+      <DocumentUploadModal 
+        open={uploadModalOpen} 
+        onOpenChange={setUploadModalOpen} 
+      />
     </header>
   );
 };

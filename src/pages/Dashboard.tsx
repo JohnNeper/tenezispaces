@@ -21,6 +21,8 @@ import { UserProfile } from "@/components/UserProfile";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { AdvancedSearch } from "@/components/AdvancedSearch";
 import { FunctionalSpaceCard } from "@/components/FunctionalSpaceCard";
+import { CreateSpaceModal } from "@/components/CreateSpaceModal";
+import { DocumentUploadModal } from "@/components/DocumentUploadModal";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -35,6 +37,8 @@ const Dashboard = () => {
     roles: [],
     activity: []
   });
+  const [createSpaceModalOpen, setCreateSpaceModalOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   // Mock data for spaces
   const spaces = [
@@ -162,12 +166,13 @@ const Dashboard = () => {
                 Vous avez {filteredSpaces.length} {t("dashboard.activeSpaces")} et 3 {t("dashboard.newMessages")}
               </p>
             </div>
-            <Link to="/spaces/create">
-              <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
-                <Plus className="w-4 h-4 mr-2" />
-                {t("dashboard.createSpace")}
-              </Button>
-            </Link>
+            <Button 
+              onClick={() => setCreateSpaceModalOpen(true)}
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {t("dashboard.createSpace")}
+            </Button>
           </div>
 
           {/* Advanced Search */}
@@ -261,12 +266,13 @@ const Dashboard = () => {
                     <p className="text-muted-foreground mb-4">
                       {t("dashboard.adjustSearch")}
                     </p>
-                    <Link to="/spaces/create">
-                      <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
-                        <Plus className="w-4 h-4 mr-2" />
-                        {t("dashboard.createSpace")}
-                      </Button>
-                    </Link>
+                    <Button 
+                      onClick={() => setCreateSpaceModalOpen(true)}
+                      className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {t("dashboard.createSpace")}
+                    </Button>
                   </div>
                 ) : (
                   filteredSpaces.map((space, index) => (
@@ -318,25 +324,29 @@ const Dashboard = () => {
                 <CardTitle className="text-lg">{t("dashboard.quickActions")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Link to="/spaces/create">
-                  <Button variant="ghost" className="w-full justify-start h-auto p-3">
-                    <Plus className="w-4 h-4 mr-3" />
-                    <div className="text-left">
-                      <p className="font-medium">{t("spaces.create")}</p>
-                      <p className="text-xs text-muted-foreground">{t("dashboard.startNewWorkspace")}</p>
-                    </div>
-                  </Button>
-                </Link>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start h-auto p-3"
+                  onClick={() => setCreateSpaceModalOpen(true)}
+                >
+                  <Plus className="w-4 h-4 mr-3" />
+                  <div className="text-left">
+                    <p className="font-medium">{t("spaces.create")}</p>
+                    <p className="text-xs text-muted-foreground">{t("dashboard.startNewWorkspace")}</p>
+                  </div>
+                </Button>
                 
-                <Link to="/documents/upload">
-                  <Button variant="ghost" className="w-full justify-start h-auto p-3">
-                    <FileText className="w-4 h-4 mr-3" />
-                    <div className="text-left">
-                      <p className="font-medium">{t("dashboard.uploadDocuments")}</p>
-                      <p className="text-xs text-muted-foreground">{t("dashboard.addToKnowledge")}</p>
-                    </div>
-                  </Button>
-                </Link>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start h-auto p-3"
+                  onClick={() => setUploadModalOpen(true)}
+                >
+                  <FileText className="w-4 h-4 mr-3" />
+                  <div className="text-left">
+                    <p className="font-medium">{t("dashboard.uploadDocuments")}</p>
+                    <p className="text-xs text-muted-foreground">{t("dashboard.addToKnowledge")}</p>
+                  </div>
+                </Button>
 
                 <Link to="/spaces/discover">
                   <Button variant="ghost" className="w-full justify-start h-auto p-3">
@@ -352,6 +362,16 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <CreateSpaceModal 
+        open={createSpaceModalOpen} 
+        onOpenChange={setCreateSpaceModalOpen} 
+      />
+      <DocumentUploadModal 
+        open={uploadModalOpen} 
+        onOpenChange={setUploadModalOpen} 
+      />
     </div>
   );
 };

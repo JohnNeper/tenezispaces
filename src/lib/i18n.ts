@@ -193,7 +193,6 @@ const resources = {
       "spaces.private": "Private",
       "spaces.model": "AI Model",
       "spaces.instructions": "Instructions",
-      "spaces.create.success": "Space created successfully",
       "spaces.search": "Search spaces...",
       "spaces.filter": "Filter",
       "spaces.mySpaces": "My Spaces",
@@ -235,6 +234,54 @@ const resources = {
       "spaces.settings.danger": "Danger Zone",
       "spaces.settings.deleteSpace": "Delete Space",
       "spaces.settings.deleteWarning": "This action cannot be undone",
+
+      // Space Creation Modal
+      "spaces.create.basicInfo": "Basic Information",
+      "spaces.create.basicInfoDesc": "Set up the foundation of your space",
+      "spaces.create.namePlaceholder": "e.g., Product Research Hub",
+      "spaces.create.descPlaceholder": "Describe what this space is about...",
+      "spaces.create.selectCategory": "Select a category",
+      "spaces.create.tagsPlaceholder": "research, analysis, team...",
+      "spaces.create.tagsHint": "Separate tags with commas",
+      "spaces.create.fillRequired": "Please fill in all required fields",
+      "spaces.create.aiConfig": "AI Configuration",
+      "spaces.create.aiConfigDesc": "Choose your AI model and settings",
+      "spaces.create.instructionsPlaceholder": "Provide custom instructions for the AI...",
+      "spaces.create.instructionsHint": "Optional: Guide how the AI should interact with your documents",
+      "spaces.create.privacy": "Privacy & Settings",
+      "spaces.create.privacyDesc": "Control access and permissions",
+      "spaces.create.publicDesc": "Everyone can discover and join",
+      "spaces.create.privateDesc": "Only invited members can access",
+      "spaces.create.allowInvites": "Allow member invites",
+      "spaces.create.allowInvitesDesc": "Let members invite others to this space",
+      "spaces.create.autoProcess": "Auto-process documents",
+      "spaces.create.autoProcessDesc": "Automatically analyze uploaded documents",
+      "spaces.create.creating": "Creating...",
+      "spaces.create.createSpace": "Create Space",
+      "spaces.create.success": "Space created successfully!",
+      "spaces.create.error": "Failed to create space",
+
+      // Categories
+      "spaces.categories.research": "Research & Analysis",
+      "spaces.categories.engineering": "Engineering & Tech",
+      "spaces.categories.marketing": "Marketing & Growth",
+      "spaces.categories.design": "Design & Creative",
+      "spaces.categories.sales": "Sales & Customer",
+      "spaces.categories.hr": "HR & People",
+      "spaces.categories.finance": "Finance & Operations",
+      "spaces.categories.education": "Education & Training",
+      "spaces.categories.other": "Other",
+
+      // AI Models
+      "spaces.aiModels.gpt5Desc": "Most advanced model with superior reasoning",
+      "spaces.aiModels.claudeDesc": "Excellent for analysis and detailed responses",
+      "spaces.aiModels.gpt4Desc": "Fast and efficient for most use cases",
+      "spaces.cost.high": "High cost",
+      "spaces.cost.medium": "Medium cost",
+      "spaces.cost.low": "Low cost",
+      "spaces.badges.latest": "Latest",
+      "spaces.badges.recommended": "Recommended",
+      "spaces.badges.popular": "Popular",
       
       // Documents
       "docs.upload": "Upload Documents",
@@ -334,6 +381,10 @@ const resources = {
       "common.error": "Error",
       "common.success": "Success",
       "common.back": "Back",
+      "common.next": "Next",
+      "common.step": "Step",
+      "common.of": "of",
+      "common.or": "or",
       
       // Authentication
       "auth.welcome": "Welcome back",
@@ -453,6 +504,14 @@ const resources = {
       "documents.noDocuments": "No documents found",
       "documents.addFirst": "Add your first document to get started",
       "documents.goBack": "Go back",
+      "documents.noFilesSelected": "Please select files to upload",
+      "documents.selectedFiles": "Selected files",
+      "documents.supportedUrlFormats": "Supported: PDF, Word, Excel, PowerPoint URLs",
+
+      // Navigation additions
+      "nav.discover": "Discover",
+      "nav.newSpace": "New Space",
+      "nav.document": "Upload Document",
     }
   },
   fr: {
@@ -468,6 +527,9 @@ const resources = {
       "nav.logout": "Déconnexion",
       "nav.login": "Se Connecter",
       "nav.signup": "Commencer",
+      "nav.discover": "Découvrir",
+      "nav.newSpace": "Nouvel Espace",
+      "nav.document": "Importer Document",
       
       // Landing Page - Hero 
       "landing.hero.badge": "✨ Espaces de Travail IA Nouvelle Génération",
@@ -572,7 +634,6 @@ const resources = {
       "spaces.private": "Privé",
       "spaces.model": "Modèle IA",
       "spaces.instructions": "Instructions",
-      "spaces.create.success": "Espace créé avec succès",
       "spaces.search": "Rechercher des espaces...",
       "spaces.filter": "Filtrer",
       "spaces.mySpaces": "Mes espaces",
@@ -705,6 +766,10 @@ const resources = {
       "common.error": "Erreur",
       "common.success": "Succès",
       "common.back": "Retour",
+      "common.next": "Suivant",
+      "common.step": "Étape",
+      "common.of": "sur",
+      "common.or": "ou",
       
       // Authentication
       "auth.welcome": "Content de vous revoir",
@@ -842,6 +907,9 @@ const resources = {
       "documents.noDocuments": "Aucun document trouvé",
       "documents.addFirst": "Ajoutez votre premier document pour commencer",
       "documents.goBack": "Retour",
+      "documents.noFilesSelected": "Veuillez sélectionner des fichiers à télécharger",
+      "documents.selectedFiles": "Fichiers sélectionnés",
+      "documents.supportedUrlFormats": "Supporté: URLs PDF, Word, Excel, PowerPoint",
     }
   },
   es: {

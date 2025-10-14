@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
+import spaceDefaultImage from "@/assets/space-default.jpg";
 
 interface SpaceCardProps {
   space: {
@@ -62,13 +63,13 @@ export const SpaceCard = ({ space }: SpaceCardProps) => {
   };
 
   // Check if there's a space image URL
-  const spaceImageUrl = (space as any).imageUrl || space.owner.avatar;
+  const spaceImageUrl = (space as any).imageUrl || (space as any).image || spaceDefaultImage;
 
   return (
     <Card className="group hover:shadow-card transition-all duration-300 border-border/50 bg-gradient-card animate-fade-in overflow-hidden">
       {/* Space Image/Color Header */}
       <div className="relative h-32 overflow-hidden">
-        {spaceImageUrl ? (
+        {spaceImageUrl !== spaceDefaultImage ? (
           <div 
             className="w-full h-full bg-cover bg-center"
             style={{ backgroundImage: `url(${spaceImageUrl})` }}
