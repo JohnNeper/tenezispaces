@@ -8,12 +8,14 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { spaceStore } from "@/stores/spaceStore";
 import { useState, useEffect } from "react";
 import logoGradient from "@/assets/logo-gradient.png";
+import { CreateSpaceModal } from "@/components/CreateSpaceModal";
 
 export const SpacesSidebar = () => {
   const { t } = useLanguage();
   const { spaceId } = useParams();
   const [spaces, setSpaces] = useState(spaceStore.getAllSpaces());
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     // Refresh spaces list periodically
@@ -28,7 +30,10 @@ export const SpacesSidebar = () => {
   );
 
   return (
-    <div className="w-64 bg-background/95 backdrop-blur-md border-r border-border flex flex-col">
+    <>
+      <CreateSpaceModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      
+      <div className="w-64 bg-background/95 backdrop-blur-md border-r border-border flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-border">
         <Link to="/" className="flex items-center gap-2 mb-4">
@@ -92,12 +97,14 @@ export const SpacesSidebar = () => {
 
       {/* Actions */}
       <div className="p-4 border-t border-border space-y-2">
-        <Link to="/spaces/create" className="block">
-          <Button className="w-full" variant="default">
-            <Plus className="w-4 h-4 mr-2" />
-            {t("spaces.createSpace")}
-          </Button>
-        </Link>
+        <Button 
+          className="w-full" 
+          variant="default"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          {t("spaces.createSpace")}
+        </Button>
         <Link to="/discover" className="block">
           <Button className="w-full" variant="outline">
             <Search className="w-4 h-4 mr-2" />
@@ -106,5 +113,6 @@ export const SpacesSidebar = () => {
         </Link>
       </div>
     </div>
+    </>
   );
 };

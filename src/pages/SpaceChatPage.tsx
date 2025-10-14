@@ -1,9 +1,11 @@
 import { useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { SpaceChat } from "@/components/SpaceChat";
 import { SpacesSidebar } from "@/components/SpacesSidebar";
 import { SpaceDetailsSidebar } from "@/components/SpaceDetailsSidebar";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
+import { spaceStore } from "@/stores/spaceStore";
 
 const mockSpace = {
   id: "1",
@@ -37,6 +39,28 @@ const mockMembers = [
 export default function SpaceChatPage() {
   const { spaceId } = useParams();
   const { t } = useLanguage();
+  const [currentSpace, setCurrentSpace] = useState(mockSpace);
+
+  useEffect(() => {
+    if (spaceId) {
+      const space = spaceStore.getSpaceById(spaceId);
+      if (space) {
+        setCurrentSpace({
+          id: space.id,
+          name: space.name,
+          description: space.description,
+          category: space.category,
+          tags: space.tags,
+          visibility: 'public' as const,
+          owner: { name: space.owner.name, avatar: space.owner.avatar || "" },
+          stats: space.stats,
+          aiModel: space.aiModel,
+          lastActivity: space.lastActivity.toLocaleString(),
+          isOwner: true,
+        });
+      }
+    }
+  }, [spaceId]);
 
   const handleShare = () => {
     const shareUrl = `${window.location.origin}/spaces/join/${spaceId}`;
@@ -46,22 +70,17 @@ export default function SpaceChatPage() {
 
   return (
     <div className="h-screen flex overflow-hidden bg-gradient-subtle">
-      {/* Sidebar gauche - Liste des spaces */}
       <SpacesSidebar />
-      
-      {/* Centre - Chat */}
       <div className="flex-1 flex flex-col min-w-0">
         <SpaceChat
-          spaceId={mockSpace.id}
-          spaceName={mockSpace.name}
-          aiModel={mockSpace.aiModel}
+          spaceId={currentSpace.id}
+          spaceName={currentSpace.name}
+          aiModel={currentSpace.aiModel}
           documents={mockDocuments}
         />
       </div>
-      
-      {/* Sidebar droite - Détails du space */}
       <SpaceDetailsSidebar
-        space={mockSpace}
+        space={currentSpace}
         documents={mockDocuments}
         members={mockMembers}
         onShare={handleShare}

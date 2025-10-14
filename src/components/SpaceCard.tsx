@@ -61,20 +61,38 @@ export const SpaceCard = ({ space }: SpaceCardProps) => {
     return colors[index];
   };
 
+  // Check if there's a space image URL
+  const spaceImageUrl = (space as any).imageUrl || space.owner.avatar;
+
   return (
-    <Card className="group hover:shadow-card transition-all duration-300 border-border/50 bg-gradient-card animate-fade-in">
-      <CardHeader className="pb-4">
+    <Card className="group hover:shadow-card transition-all duration-300 border-border/50 bg-gradient-card animate-fade-in overflow-hidden">
+      {/* Space Image/Color Header */}
+      <div className="relative h-32 overflow-hidden">
+        {spaceImageUrl ? (
+          <div 
+            className="w-full h-full bg-cover bg-center"
+            style={{ backgroundImage: `url(${spaceImageUrl})` }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+          </div>
+        ) : (
+          <div className={`w-full h-full bg-gradient-to-br ${getSpaceColor(space.name)}`}>
+            <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-6xl font-bold text-white/80">
+                {space.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <CardHeader className="pb-4 -mt-8 relative z-10">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            {space.owner.avatar ? (
-              <div className="w-16 h-16 rounded-xl overflow-hidden shadow-elegant border-2 border-border/50">
-                <img src={space.owner.avatar} alt={space.name} className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className={`w-16 h-16 bg-gradient-to-br ${getSpaceColor(space.name)} rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-glow`}>
-                {space.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <div className="w-16 h-16 bg-background/95 backdrop-blur-sm rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-elegant border-2 border-border/50">
+              {space.name.charAt(0).toUpperCase()}
+            </div>
             <div>
               <CardTitle className="text-lg">{space.name}</CardTitle>
               <div className="flex items-center gap-2 mt-1">
