@@ -1,38 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { 
-  Send, 
-  Bot, 
-  User, 
-  Sparkles, 
-  FileText, 
-  Clock,
-  RotateCcw,
-  Eye,
-  MessageSquare
+  Send, Bot, User, Sparkles, FileText, Clock, RotateCcw, Users, MessageSquare
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useToast } from "@/hooks/use-toast";
-import { DocumentPreview } from "./DocumentPreview";
-import { chatService, type ChatMessage } from "@/services/chatService";
-import { spaceStore, type Space } from "@/stores/spaceStore";
-
-// Utilise le type des messages du store
-type Message = Space['messages'][0];
+import { useAuth } from "@/hooks/useAuth";
+import { useSpaceMessages, useTeamMessages } from "@/hooks/useSpaces";
+import { supabase } from "@/integrations/supabase/client";
+import ReactMarkdown from "react-markdown";
 
 interface SpaceChatProps {
   spaceId: string;
@@ -42,103 +22,159 @@ interface SpaceChatProps {
 }
 
 export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatProps) => {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [selectedModel, setSelectedModel] = useState(aiModel);
+  const [teamInput, setTeamInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [previewDocument, setPreviewDocument] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("ai");
+  const [streamingContent, setStreamingContent] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const teamEndRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
-  const { toast } = useToast();
-
-  const aiModels = [
-    { id: "GPT-5", name: "GPT-5" },
-    { id: "Claude Sonnet-4", name: "Claude Sonnet-4" },
-    { id: "GPT-4", name: "GPT-4" },
-    { id: "Gemini Pro", name: "Gemini Pro" },
-  ];
-
-  // Mettre à jour les messages existants avec le spaceStore
-  useEffect(() => {
-    if (spaceId) {
-      const history = spaceStore.getMessages(spaceId);
-      setMessages(history);
-    }
-  }, [spaceId]);
+  const { user } = useAuth();
+  const { messages, setMessages } = useSpaceMessages(spaceId);
+  const { messages: teamMessages, sendTeamMessage } = useTeamMessages(spaceId);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (activeTab === "ai") {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      teamEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  useEffect(() => { scrollToBottom(); }, [messages, teamMessages, streamingContent, activeTab]);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !user) return;
 
-    const currentInput = input.trim();
+    const userMessage = input.trim();
     setInput("");
     setIsLoading(true);
+    setStreamingContent("");
 
-    // Ajouter le message utilisateur au store
-    const userId = localStorage.getItem('tenezis_user') ? JSON.parse(localStorage.getItem('tenezis_user')!).id : '1';
-    
-    spaceStore.addMessage(spaceId, {
-      content: currentInput,
-      type: 'user',
-      userId: userId
-    });
-
-    // Mettre à jour l'état local immédiatement
-    const updatedMessages = spaceStore.getMessages(spaceId);
-    setMessages([...updatedMessages]);
+    // Optimistically add user message
+    const tempUserMsg = {
+      id: `temp-${Date.now()}`,
+      space_id: spaceId,
+      user_id: user.id,
+      content: userMessage,
+      role: "user",
+      sources: [],
+      created_at: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, tempUserMsg]);
 
     try {
-      const response = await chatService.sendMessage(spaceId, currentInput, selectedModel);
-      
-      // Ajouter la réponse IA au store
-      spaceStore.addMessage(spaceId, {
-        content: response.message,
-        type: 'ai',
-        userId: 'ai',
-        sources: response.sources
-      });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No session");
 
-      // Mettre à jour l'état local avec tous les messages
-      const finalMessages = spaceStore.getMessages(spaceId);
-      setMessages([...finalMessages]);
+      const history = messages.slice(-10).map(m => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ spaceId, message: userMessage, history }),
+        }
+      );
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({ error: "Erreur inconnue" }));
+        throw new Error(errData.error || `HTTP ${resp.status}`);
+      }
+
+      if (!resp.body) throw new Error("No response body");
+
+      // Stream the response
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+      let textBuffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              fullContent += content;
+              setStreamingContent(fullContent);
+            }
+          } catch {}
+        }
+      }
+
+      // Replace streaming with final message (will come via realtime)
+      setStreamingContent("");
       
-      toast({
-        title: t("chat.responseGenerated"),
-        description: t("chat.aiAnalyzed"),
-      });
-    } catch (error) {
-      console.error('Chat error:', error);
-      toast({
-        title: "Erreur",
-        description: t("chat.error"),
-        variant: "destructive"
-      });
+      // If realtime doesn't deliver, add it manually
+      setTimeout(() => {
+        setMessages(prev => {
+          if (prev.some(m => m.role === "assistant" && m.content === fullContent)) return prev;
+          return [...prev, {
+            id: `ai-${Date.now()}`,
+            space_id: spaceId,
+            user_id: null,
+            content: fullContent,
+            role: "assistant",
+            sources: [],
+            created_at: new Date().toISOString(),
+          }];
+        });
+      }, 2000);
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      setStreamingContent("");
+      setMessages(prev => [...prev, {
+        id: `error-${Date.now()}`,
+        space_id: spaceId,
+        user_id: null,
+        content: `❌ ${error.message || t("chat.error")}`,
+        role: "assistant",
+        sources: [],
+        created_at: new Date().toISOString(),
+      }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  const handleTeamSend = async () => {
+    if (!teamInput.trim() || !user) return;
+    const msg = teamInput.trim();
+    setTeamInput("");
+    await sendTeamMessage(msg, user.id);
   };
 
-  const startNewConversation = () => {
-    setMessages([]);
+  const handleKeyPress = (e: React.KeyboardEvent, handler: () => void) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handler();
+    }
   };
 
   return (
     <div className="flex flex-col h-full">
-      {/* Chat Header */}
+      {/* Header */}
       <div className="border-b border-border p-4 bg-background/95 backdrop-blur-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -150,187 +186,203 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">
                   <Bot className="w-3 h-3 mr-1" />
-                  {selectedModel}
+                  IA
                 </Badge>
                 <Badge variant="secondary" className="text-xs">
                   <FileText className="w-3 h-3 mr-1" />
-                  {documents.length} {t("chat.documents")}
+                  {documents.length} docs
                 </Badge>
               </div>
             </div>
           </div>
-          
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={startNewConversation}
-            className="gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            {t("chat.new")}
-          </Button>
         </div>
       </div>
 
-      {/* Messages */}
-      <ScrollArea className="flex-1 p-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {messages.length === 0 && (
-            <Card className="border-border/50 bg-gradient-card">
-              <CardContent className="p-8 text-center space-y-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  <Sparkles className="w-8 h-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground mb-2">
-                    {t("chat.welcome")} {spaceName}
-                  </h3>
-                  <p className="text-muted-foreground text-sm">
-                    {t("chat.startConversation")}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+        <TabsList className="mx-4 mt-2 grid grid-cols-2 w-fit">
+          <TabsTrigger value="ai" className="gap-1">
+            <Bot className="w-3 h-3" /> Chat IA
+          </TabsTrigger>
+          <TabsTrigger value="team" className="gap-1">
+            <Users className="w-3 h-3" /> {t("chat.team")}
+          </TabsTrigger>
+        </TabsList>
 
-          {messages.map((message) => (
-            <div key={message.id} className="flex gap-3 animate-fade-in">
-              <Avatar className="w-9 h-9 flex-shrink-0">
-                {message.type === 'user' ? (
-                  <AvatarFallback className="bg-primary/10">
-                    <User className="w-4 h-4 text-primary" />
-                  </AvatarFallback>
-                ) : (
-                  <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                    <Bot className="w-4 h-4" />
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              
-              <div className="flex-1 space-y-2 max-w-3xl">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-foreground">
-                    {message.type === 'user' ? t("dashboard.you") : selectedModel}
-                  </span>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {typeof message.timestamp === 'string' ? message.timestamp : message.timestamp.toLocaleTimeString()}
-                  </span>
-                </div>
-                
-                <div className={`rounded-2xl px-4 py-3 ${
-                  message.type === 'user' 
-                    ? 'bg-primary/10 border border-primary/20' 
-                    : 'bg-muted/50'
-                }`}>
-                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
-                    {message.content}
-                  </p>
-                </div>
-                
-                {message.sources && (
-                  <div className="space-y-2 pl-1">
-                    <span className="text-xs font-medium text-muted-foreground">{t("chat.sources")}</span>
-                    <div className="flex flex-wrap gap-2">
-                      {message.sources.map((source) => (
-                        <Badge 
-                          key={source.name} 
-                          variant="outline" 
-                          className="text-xs cursor-pointer hover:bg-muted/50 transition-colors group"
-                          onClick={() => {
-                            const doc = documents.find(d => d.name === source.name);
-                            if (doc) {
-                              setPreviewDocument({
-                                ...doc,
-                                size: "2.3 MB"
-                              });
-                            }
-                          }}
-                        >
-                          <FileText className="w-3 h-3 mr-1" />
-                          {source.name}
-                          <Eye className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </Badge>
-                      ))}
-                    </div>
+        {/* AI Chat */}
+        <TabsContent value="ai" className="flex-1 flex flex-col min-h-0 mt-0">
+          <ScrollArea className="flex-1 p-6">
+            <div className="max-w-4xl mx-auto space-y-6">
+              {messages.length === 0 && !streamingContent && (
+                <div className="p-8 text-center space-y-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                    <Sparkles className="w-8 h-8 text-primary" />
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {isLoading && (
-            <div className="flex gap-3 animate-fade-in">
-              <Avatar className="w-9 h-9 flex-shrink-0">
-                <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                  <Bot className="w-4 h-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 max-w-3xl">
-                <div className="rounded-2xl px-4 py-3 bg-muted/50">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
-                    <span className="text-sm">{t("chat.thinking")}</span>
-                  </div>
+                  <h3 className="font-semibold text-foreground">{t("chat.welcome")} {spaceName}</h3>
+                  <p className="text-muted-foreground text-sm">{t("chat.startConversation")}</p>
                 </div>
-              </div>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-      </ScrollArea>
+              )}
 
-      {/* Input */}
-      <div className="border-t border-border p-4 bg-background/95 backdrop-blur-md">
-        <div className="max-w-4xl mx-auto space-y-3">
-          <div className="flex items-center gap-2">
-            <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger className="w-48 h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {aiModels.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
+              {messages.map((msg) => (
+                <div key={msg.id} className="flex gap-3 animate-fade-in">
+                  <Avatar className="w-9 h-9 flex-shrink-0">
+                    <AvatarFallback className={msg.role === "user" ? "bg-primary/10" : "bg-gradient-primary text-primary-foreground"}>
+                      {msg.role === "user" ? <User className="w-4 h-4 text-primary" /> : <Bot className="w-4 h-4" />}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 max-w-3xl space-y-1">
                     <div className="flex items-center gap-2">
-                      <Bot className="w-3 h-3" />
-                      {model.name}
+                      <span className="text-sm font-medium">{msg.role === "user" ? (user?.name || t("dashboard.you")) : "IA"}</span>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {new Date(msg.created_at).toLocaleTimeString()}
+                      </span>
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex gap-2 items-end">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder={t("chat.placeholder")}
-              disabled={isLoading}
-              className="flex-1 min-h-[60px] max-h-[120px] resize-none rounded-2xl"
-            />
-            <Button 
-              onClick={handleSend} 
-              disabled={!input.trim() || isLoading}
-              size="lg"
-              className="bg-gradient-primary hover:shadow-glow transition-all duration-300 h-[60px] px-6"
-            >
-              <Send className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-      </div>
+                    <div className={`rounded-2xl px-4 py-3 ${msg.role === "user" ? "bg-primary/10 border border-primary/20" : "bg-muted/50"}`}>
+                      {msg.role === "assistant" ? (
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="text-foreground whitespace-pre-wrap">{msg.content}</p>
+                      )}
+                    </div>
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pl-1">
+                        <span className="text-xs text-muted-foreground">{t("chat.sources")}:</span>
+                        {msg.sources.map((s: any, i: number) => (
+                          <Badge key={i} variant="outline" className="text-xs">
+                            <FileText className="w-3 h-3 mr-1" />{s.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
 
-      {/* Document Preview Modal */}
-      {previewDocument && (
-        <DocumentPreview
-          document={previewDocument}
-          onClose={() => setPreviewDocument(null)}
-        />
-      )}
+              {streamingContent && (
+                <div className="flex gap-3 animate-fade-in">
+                  <Avatar className="w-9 h-9 flex-shrink-0">
+                    <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                      <Bot className="w-4 h-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 max-w-3xl">
+                    <div className="rounded-2xl px-4 py-3 bg-muted/50">
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown>{streamingContent}</ReactMarkdown>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isLoading && !streamingContent && (
+                <div className="flex gap-3 animate-fade-in">
+                  <Avatar className="w-9 h-9 flex-shrink-0">
+                    <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                      <Bot className="w-4 h-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="rounded-2xl px-4 py-3 bg-muted/50">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: "0.2s" }} />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: "0.4s" }} />
+                      <span className="text-sm">{t("chat.thinking")}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+
+          <div className="border-t border-border p-4 bg-background/95 backdrop-blur-md">
+            <div className="max-w-4xl mx-auto flex gap-2 items-end">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => handleKeyPress(e, handleSend)}
+                placeholder={t("chat.placeholder")}
+                disabled={isLoading}
+                className="flex-1 min-h-[60px] max-h-[120px] resize-none rounded-2xl"
+              />
+              <Button
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+                size="lg"
+                className="bg-gradient-primary hover:shadow-glow h-[60px] px-6"
+              >
+                <Send className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Team Chat */}
+        <TabsContent value="team" className="flex-1 flex flex-col min-h-0 mt-0">
+          <ScrollArea className="flex-1 p-6">
+            <div className="max-w-4xl mx-auto space-y-4">
+              {teamMessages.length === 0 && (
+                <div className="p-8 text-center space-y-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                    <MessageSquare className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="font-semibold">{t("chat.teamEmpty")}</h3>
+                  <p className="text-muted-foreground text-sm">{t("chat.teamEmptyDesc")}</p>
+                </div>
+              )}
+              {teamMessages.map((msg) => {
+                const isMe = msg.user_id === user?.id;
+                const name = msg.profile?.display_name || (isMe ? user?.name : "Membre");
+                return (
+                  <div key={msg.id} className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
+                    <Avatar className="w-8 h-8 flex-shrink-0">
+                      <AvatarFallback className={isMe ? "bg-primary/20" : "bg-muted"}>
+                        {(name || "?").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className={`max-w-[70%] space-y-1 ${isMe ? "items-end" : ""}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium">{name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(msg.created_at).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <div className={`rounded-2xl px-4 py-2 ${isMe ? "bg-primary text-primary-foreground" : "bg-muted/50"}`}>
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={teamEndRef} />
+            </div>
+          </ScrollArea>
+
+          <div className="border-t border-border p-4 bg-background/95 backdrop-blur-md">
+            <div className="max-w-4xl mx-auto flex gap-2 items-end">
+              <Textarea
+                value={teamInput}
+                onChange={(e) => setTeamInput(e.target.value)}
+                onKeyDown={(e) => handleKeyPress(e, handleTeamSend)}
+                placeholder={t("chat.teamPlaceholder")}
+                className="flex-1 min-h-[50px] max-h-[100px] resize-none rounded-2xl"
+              />
+              <Button
+                onClick={handleTeamSend}
+                disabled={!teamInput.trim()}
+                size="lg"
+                className="bg-gradient-primary hover:shadow-glow h-[50px] px-6"
+              >
+                <Send className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
