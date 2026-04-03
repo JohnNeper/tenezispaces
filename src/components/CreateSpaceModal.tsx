@@ -22,7 +22,7 @@ import {
 import { useLanguage } from "@/hooks/useLanguage";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { spaceStore } from "@/stores/spaceStore";
+import { useSpaces } from "@/hooks/useSpaces";
 
 interface CreateSpaceModalProps {
   open: boolean;
@@ -106,27 +106,19 @@ export const CreateSpaceModal = ({ open, onOpenChange }: CreateSpaceModalProps) 
     if (step > 1) setStep(step - 1);
   };
 
+  const { createSpace } = useSpaces();
+
   const handleSubmit = async () => {
     setIsLoading(true);
 
     try {
-      const currentUser = spaceStore.getCurrentUser();
-      const newSpace = spaceStore.createSpace({
+      const newSpace = await createSpace({
         name: formData.name,
         description: formData.description,
         category: formData.category,
         tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
         visibility: formData.visibility as 'public' | 'private',
-        aiModel: formData.aiModel,
-        owner: { 
-          id: currentUser?.id || '1', 
-          name: currentUser?.name || 'Current User',
-          avatar: currentUser?.avatar 
-        },
-        documents: [],
-        settings: {
-          resourcesVisible: true
-        }
+        ai_model: formData.aiModel,
       });
       
       toast({

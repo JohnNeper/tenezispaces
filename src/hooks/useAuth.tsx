@@ -1,5 +1,8 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { lovable } from '@/integrations/lovable/index';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -31,51 +34,51 @@ export const useAuth = () => {
   return context;
 };
 
+function mapSupabaseUser(su: SupabaseUser): User {
+  const meta = su.user_metadata || {};
+  return {
+    id: su.id,
+    name: meta.full_name || meta.name || su.email?.split('@')[0] || 'Utilisateur',
+    email: su.email || '',
+    avatar: meta.avatar_url || meta.picture || '',
+    plan: 'free',
+    isOnboarded: true,
+  };
+}
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Simulate authentication check
   useEffect(() => {
-    const checkAuth = async () => {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if user is stored in localStorage (mock authentication)
-      const storedUser = localStorage.getItem('tenezis_user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    // Listen for auth changes FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(mapSupabaseUser(session.user));
+      } else {
+        setUser(null);
       }
       setLoading(false);
-    };
+    });
 
-    checkAuth();
+    // Then check existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(mapSupabaseUser(session.user));
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string, redirectTo?: string) => {
     setLoading(true);
-    
     try {
-      // Simulate API login
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const mockUser: User = {
-        id: '1',
-        name: 'John Doe',
-        email: email,
-        avatar: '',
-        plan: 'pro',
-        isOnboarded: true
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('tenezis_user', JSON.stringify(mockUser));
-      
-      // Redirect to intended destination or default to home
-      navigate(redirectTo || '/');
-    } catch (error) {
-      throw new Error('Erreur de connexion');
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      navigate(redirectTo || '/dashboard');
     } finally {
       setLoading(false);
     }
@@ -83,27 +86,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signup = async (name: string, email: string, password: string, redirectTo?: string) => {
     setLoading(true);
-    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const mockUser: User = {
-        id: '1',
-        name: name,
-        email: email,
-        avatar: '',
-        plan: 'free',
-        isOnboarded: false
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('tenezis_user', JSON.stringify(mockUser));
-      
-      // Redirect to intended destination or default to home
-      navigate(redirectTo || '/');
-    } catch (error) {
-      throw new Error('Erreur lors de la création du compte');
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: name },
+          emailRedirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      navigate(redirectTo || '/dashboard');
     } finally {
       setLoading(false);
     }
@@ -111,51 +104,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const socialAuth = async (provider: 'google' | 'apple', redirectTo?: string) => {
     setLoading(true);
-    
     try {
-      // Simulate social auth
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const mockUser: User = {
-        id: '1',
-        name: provider === 'google' ? 'John Doe (Google)' : 'John Doe (Apple)',
-        email: `john.doe@${provider}.com`,
-        avatar: '',
-        plan: 'free',
-        isOnboarded: false
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('tenezis_user', JSON.stringify(mockUser));
-      
-      // Redirect to intended destination or default to home
-      navigate(redirectTo || '/');
-    } catch (error) {
-      throw new Error(`Erreur de connexion ${provider}`);
+      const result = await lovable.auth.signInWithOAuth(provider, {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) throw result.error;
+      if (result.redirected) return;
+      // Session is set, navigate
+      navigate(redirectTo || '/dashboard');
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('tenezis_user');
     navigate('/');
   };
 
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    login,
-    signup,
-    socialAuth,
-    logout,
-    loading,
-    isLoading: loading
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated: !!user,
+      login,
+      signup,
+      socialAuth,
+      logout,
+      loading,
+      isLoading: loading,
+    }}>
       {children}
     </AuthContext.Provider>
   );
