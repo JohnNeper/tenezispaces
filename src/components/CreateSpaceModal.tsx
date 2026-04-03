@@ -22,7 +22,7 @@ import {
 import { useLanguage } from "@/hooks/useLanguage";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { spaceStore } from "@/stores/spaceStore";
+import { useSpaces } from "@/hooks/useSpaces";
 
 interface CreateSpaceModalProps {
   open: boolean;
