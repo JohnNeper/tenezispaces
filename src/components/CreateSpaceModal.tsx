@@ -106,27 +106,19 @@ export const CreateSpaceModal = ({ open, onOpenChange }: CreateSpaceModalProps) 
     if (step > 1) setStep(step - 1);
   };
 
+  const { createSpace } = useSpaces();
+
   const handleSubmit = async () => {
     setIsLoading(true);
 
     try {
-      const currentUser = spaceStore.getCurrentUser();
-      const newSpace = spaceStore.createSpace({
+      const newSpace = await createSpace({
         name: formData.name,
         description: formData.description,
         category: formData.category,
         tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
         visibility: formData.visibility as 'public' | 'private',
-        aiModel: formData.aiModel,
-        owner: { 
-          id: currentUser?.id || '1', 
-          name: currentUser?.name || 'Current User',
-          avatar: currentUser?.avatar 
-        },
-        documents: [],
-        settings: {
-          resourcesVisible: true
-        }
+        ai_model: formData.aiModel,
       });
       
       toast({
