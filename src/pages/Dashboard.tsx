@@ -154,7 +154,7 @@ const Dashboard = () => {
                                   {space.name}
                                 </h3>
                                 {space.owner_id === user?.id && (
-                                  <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                                  <Crown className="w-4 h-4 text-warning flex-shrink-0" />
                                 )}
                                 <Badge variant={space.visibility === "private" ? "secondary" : "outline"} className="flex-shrink-0 gap-1">
                                   {space.visibility === "private" ? <Lock className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
