@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { SpaceChat } from "@/components/SpaceChat";
 import { SpacesSidebar } from "@/components/SpacesSidebar";
 import { useSpaceDetails } from "@/hooks/useSpaces";
@@ -6,8 +6,7 @@ import { Loader2 } from "lucide-react";
 
 export default function SpaceChatPage() {
   const { spaceId } = useParams();
-  const navigate = useNavigate();
-  const { space, members, documents, loading } = useSpaceDetails(spaceId);
+  const { space, documents, loading, refreshDetails } = useSpaceDetails(spaceId);
 
   if (loading) {
     return (
@@ -32,8 +31,17 @@ export default function SpaceChatPage() {
         <SpaceChat
           spaceId={space.id}
           spaceName={space.name}
-          aiModel={space.ai_model}
-          documents={documents.map(d => ({ id: d.id, name: d.name, type: d.type }))}
+          aiModel={space.ai_model || 'google/gemini-3-flash-preview'}
+          documents={documents.map(d => ({
+            id: d.id,
+            name: d.name,
+            type: d.type,
+            status: d.status,
+            chunk_count: d.chunk_count,
+            size_bytes: d.size_bytes,
+            created_at: d.created_at,
+          }))}
+          onRefreshDocuments={refreshDetails}
         />
       </div>
     </div>

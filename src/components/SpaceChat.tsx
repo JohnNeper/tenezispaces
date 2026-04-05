@@ -6,27 +6,57 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Send, Bot, User, Sparkles, FileText, Clock, RotateCcw, Users, MessageSquare
+  Send, Bot, User, Sparkles, FileText, Clock, Users, MessageSquare, Upload, Loader2, CheckCircle2, AlertCircle, Trash2
 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { useSpaceMessages, useTeamMessages } from "@/hooks/useSpaces";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
+import { DocumentUploadModal } from "./DocumentUploadModal";
+
+interface SpaceDocument {
+  id: string;
+  name: string;
+  type: string;
+  status: string | null;
+  chunk_count: number | null;
+  size_bytes: number | null;
+  created_at: string;
+}
 
 interface SpaceChatProps {
   spaceId: string;
   spaceName: string;
   aiModel: string;
-  documents: Array<{ id: string; name: string; type: string }>;
+  documents: SpaceDocument[];
+  onRefreshDocuments?: () => void;
 }
 
-export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatProps) => {
+const statusIcon = (status: string | null) => {
+  switch (status) {
+    case 'ready': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+    case 'processing': return <Loader2 className="w-4 h-4 text-yellow-500 animate-spin" />;
+    case 'error': return <AlertCircle className="w-4 h-4 text-destructive" />;
+    default: return <Loader2 className="w-4 h-4 text-muted-foreground" />;
+  }
+};
+
+const formatSize = (bytes: number | null) => {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
+};
+
+export const SpaceChat = ({ spaceId, spaceName, aiModel, documents, onRefreshDocuments }: SpaceChatProps) => {
   const [input, setInput] = useState("");
   const [teamInput, setTeamInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("ai");
   const [streamingContent, setStreamingContent] = useState("");
+  const [showUpload, setShowUpload] = useState(false);
+  const [showDocs, setShowDocs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const teamEndRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
@@ -44,15 +74,21 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
 
   useEffect(() => { scrollToBottom(); }, [messages, teamMessages, streamingContent, activeTab]);
 
+  const readyDocs = documents.filter(d => d.status === 'ready');
+
+  const handleDeleteDoc = async (docId: string) => {
+    await supabase.from('document_chunks').delete().eq('document_id', docId);
+    await supabase.from('documents').delete().eq('id', docId);
+    onRefreshDocuments?.();
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading || !user) return;
-
     const userMessage = input.trim();
     setInput("");
     setIsLoading(true);
     setStreamingContent("");
 
-    // Optimistically add user message
     const tempUserMsg = {
       id: `temp-${Date.now()}`,
       space_id: spaceId,
@@ -92,7 +128,6 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
 
       if (!resp.body) throw new Error("No response body");
 
-      // Stream the response
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let fullContent = "";
@@ -123,10 +158,7 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
         }
       }
 
-      // Replace streaming with final message (will come via realtime)
       setStreamingContent("");
-      
-      // If realtime doesn't deliver, add it manually
       setTimeout(() => {
         setMessages(prev => {
           if (prev.some(m => m.role === "assistant" && m.content === fullContent)) return prev;
@@ -188,14 +220,50 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
                   <Bot className="w-3 h-3 mr-1" />
                   IA
                 </Badge>
-                <Badge variant="secondary" className="text-xs">
+                <Badge
+                  variant="secondary"
+                  className="text-xs cursor-pointer hover:bg-secondary/80"
+                  onClick={() => setShowDocs(!showDocs)}
+                >
                   <FileText className="w-3 h-3 mr-1" />
-                  {documents.length} docs
+                  {readyDocs.length}/{documents.length} docs
                 </Badge>
               </div>
             </div>
           </div>
+          <Button variant="outline" size="sm" onClick={() => setShowUpload(true)} className="gap-2">
+            <Upload className="w-4 h-4" />
+            Ajouter des documents
+          </Button>
         </div>
+
+        {/* Documents panel */}
+        {showDocs && (
+          <div className="mt-3 p-3 bg-muted/30 rounded-lg border border-border/50 space-y-2 max-h-48 overflow-y-auto">
+            {documents.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-2">
+                Aucun document. Uploadez des fichiers pour alimenter l'IA.
+              </p>
+            ) : (
+              documents.map(doc => (
+                <div key={doc.id} className="flex items-center justify-between text-sm p-2 bg-background/50 rounded-md">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {statusIcon(doc.status)}
+                    <span className="truncate font-medium">{doc.name}</span>
+                    <span className="text-xs text-muted-foreground uppercase">{doc.type}</span>
+                    {doc.size_bytes ? <span className="text-xs text-muted-foreground">{formatSize(doc.size_bytes)}</span> : null}
+                    {doc.status === 'ready' && doc.chunk_count ? (
+                      <span className="text-xs text-muted-foreground">{doc.chunk_count} chunks</span>
+                    ) : null}
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteDoc(doc.id)}>
+                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -219,7 +287,16 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
                     <Sparkles className="w-8 h-8 text-primary" />
                   </div>
                   <h3 className="font-semibold text-foreground">{t("chat.welcome")} {spaceName}</h3>
-                  <p className="text-muted-foreground text-sm">{t("chat.startConversation")}</p>
+                  <p className="text-muted-foreground text-sm">
+                    {readyDocs.length > 0
+                      ? `${readyDocs.length} document(s) chargé(s). Posez votre question !`
+                      : "Uploadez des documents pour que l'IA puisse y répondre."}
+                  </p>
+                  {readyDocs.length === 0 && (
+                    <Button variant="outline" onClick={() => setShowUpload(true)} className="gap-2">
+                      <Upload className="w-4 h-4" /> Uploader des documents
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -232,7 +309,7 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
                   </Avatar>
                   <div className="flex-1 max-w-3xl space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{msg.role === "user" ? (user?.name || t("dashboard.you")) : "IA"}</span>
+                      <span className="text-sm font-medium">{msg.role === "user" ? (user?.name || "Vous") : "IA"}</span>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {new Date(msg.created_at).toLocaleTimeString()}
@@ -247,10 +324,10 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
                         <p className="text-foreground whitespace-pre-wrap">{msg.content}</p>
                       )}
                     </div>
-                    {msg.sources && msg.sources.length > 0 && (
+                    {msg.sources && Array.isArray(msg.sources) && msg.sources.length > 0 && (
                       <div className="flex flex-wrap gap-2 pl-1">
-                        <span className="text-xs text-muted-foreground">{t("chat.sources")}:</span>
-                        {msg.sources.map((s: any, i: number) => (
+                        <span className="text-xs text-muted-foreground">Sources:</span>
+                        {(msg.sources as any[]).map((s: any, i: number) => (
                           <Badge key={i} variant="outline" className="text-xs">
                             <FileText className="w-3 h-3 mr-1" />{s.name}
                           </Badge>
@@ -305,7 +382,7 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => handleKeyPress(e, handleSend)}
-                placeholder={t("chat.placeholder")}
+                placeholder={readyDocs.length > 0 ? "Posez une question sur vos documents..." : "Uploadez des documents d'abord..."}
                 disabled={isLoading}
                 className="flex-1 min-h-[60px] max-h-[120px] resize-none rounded-2xl"
               />
@@ -383,6 +460,13 @@ export const SpaceChat = ({ spaceId, spaceName, aiModel, documents }: SpaceChatP
           </div>
         </TabsContent>
       </Tabs>
+
+      <DocumentUploadModal
+        open={showUpload}
+        onOpenChange={setShowUpload}
+        spaceId={spaceId}
+        onUploadComplete={onRefreshDocuments}
+      />
     </div>
   );
 };
