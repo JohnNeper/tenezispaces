@@ -1,96 +1,58 @@
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  Users, 
-  FileText, 
-  Bot, 
-  CheckCircle, 
-  XCircle, 
-  ArrowLeft,
-  Crown,
-  Clock,
-  Globe,
-  Lock
-} from "lucide-react";
+import { Users, FileText, Bot, CheckCircle, XCircle, ArrowLeft, Crown, Globe, Lock, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
-import { spaceStore, type Space } from "@/stores/spaceStore";
+import { useSpaces, useSpaceDetails } from "@/hooks/useSpaces";
 
 export default function JoinSpace() {
   const { spaceId } = useParams();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
-  
-  const [space, setSpace] = useState<Space | null>(null);
-  const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
+  const { joinSpace } = useSpaces();
+  const { space, members, loading } = useSpaceDetails(spaceId);
   const [isJoining, setIsJoining] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
 
-  const token = searchParams.get('token');
-
+  // Check if user is already a member
   useEffect(() => {
-    if (!spaceId) return;
-    
-    const foundSpace = spaceStore.getSpaceById(spaceId);
-    setSpace(foundSpace);
-    
-    if (foundSpace && token) {
-      const isValid = spaceStore.validateInviteToken(spaceId, token);
-      setIsValidToken(isValid);
-    } else if (foundSpace && foundSpace.visibility === 'public') {
-      setIsValidToken(true);
-    } else {
-      setIsValidToken(false);
+    if (user && members.length > 0) {
+      const isMember = members.some(m => m.user_id === user.id);
+      if (isMember) {
+        navigate(`/spaces/${spaceId}`, { replace: true });
+      }
     }
-  }, [spaceId, token]);
+  }, [user, members, spaceId, navigate]);
 
   const handleJoinSpace = async () => {
     if (!space || !user) return;
-    
     setIsJoining(true);
     
     try {
-      // Vérifier si l'utilisateur est déjà membre
-      const isAlreadyMember = space.members.some(member => member.id === user.id);
-      if (isAlreadyMember) {
-        toast({
-          title: t("join.alreadyMember"),
-          description: t("join.redirecting"),
-        });
-        navigate(`/spaces/${spaceId}`);
-        return;
-      }
-      
-      const success = spaceStore.joinSpace(spaceId!, user.id, user.name);
-      
-      if (success) {
-        setHasJoined(true);
-        toast({
-          title: t("join.success"),
-          description: t("join.welcomeToSpace", { spaceName: space.name }),
-        });
-        
-        // Rediriger vers l'espace après 2 secondes
-        setTimeout(() => {
-          navigate(`/spaces/${spaceId}`);
-        }, 2000);
-      } else {
-        throw new Error('Failed to join space');
-      }
-    } catch (error) {
+      await joinSpace(space.id);
+      setHasJoined(true);
       toast({
-        title: t("join.error"),
-        description: t("join.tryAgain"),
-        variant: "destructive"
+        title: t("join.success") || "Succès",
+        description: `Bienvenue dans ${space.name} !`,
       });
+      setTimeout(() => navigate(`/spaces/${spaceId}`), 1500);
+    } catch (error: any) {
+      if (error?.message?.includes('duplicate')) {
+        navigate(`/spaces/${spaceId}`);
+      } else {
+        toast({
+          title: t("join.error") || "Erreur",
+          description: "Impossible de rejoindre cet espace",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsJoining(false);
     }
@@ -104,15 +66,15 @@ export default function JoinSpace() {
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <Users className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle className="text-xl">{t("join.authRequired")}</CardTitle>
-            <CardDescription>{t("join.loginToJoin")}</CardDescription>
+            <CardTitle className="text-xl">Connexion requise</CardTitle>
+            <CardDescription>Connectez-vous pour rejoindre cet espace</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button asChild className="w-full bg-gradient-primary">
-              <Link to="/login">{t("auth.login")}</Link>
+              <Link to="/login">Se connecter</Link>
             </Button>
             <Button asChild variant="outline" className="w-full">
-              <Link to="/signup">{t("auth.signup")}</Link>
+              <Link to="/signup">Créer un compte</Link>
             </Button>
           </CardContent>
         </Card>
@@ -120,20 +82,15 @@ export default function JoinSpace() {
     );
   }
 
-  if (!space || isValidToken === null) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-elegant border-border/50">
-          <CardContent className="p-6 text-center">
-            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-muted-foreground">{t("join.loading")}</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!isValidToken) {
+  if (!space) {
     return (
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-elegant border-border/50">
@@ -141,12 +98,12 @@ export default function JoinSpace() {
             <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <XCircle className="w-8 h-8 text-destructive" />
             </div>
-            <CardTitle className="text-xl">{t("join.invalidInvite")}</CardTitle>
-            <CardDescription>{t("join.expiredOrInvalid")}</CardDescription>
+            <CardTitle className="text-xl">Espace introuvable</CardTitle>
+            <CardDescription>Cet espace n'existe pas ou n'est pas accessible</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full">
-              <Link to="/discover">{t("join.browsePublic")}</Link>
+              <Link to="/discover">Explorer les espaces</Link>
             </Button>
           </CardContent>
         </Card>
@@ -159,15 +116,15 @@ export default function JoinSpace() {
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-elegant border-border/50">
           <CardHeader className="text-center">
-            <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-success" />
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
-            <CardTitle className="text-xl">{t("join.joinedSuccess")}</CardTitle>
-            <CardDescription>{t("join.redirectingToSpace")}</CardDescription>
+            <CardTitle className="text-xl">Bienvenue !</CardTitle>
+            <CardDescription>Redirection vers l'espace...</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
+            <div className="flex justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -177,22 +134,14 @@ export default function JoinSpace() {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      {/* Header */}
       <header className="bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/discover" className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-5 h-5" />
-            <span>{t("join.backToDiscover")}</span>
+            <span>Retour</span>
           </Link>
-          
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <Users className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">{t("join.joinSpace")}</span>
-          </div>
-          
-          <div className="w-24"></div>
+          <span className="text-xl font-bold text-foreground">Rejoindre un espace</span>
+          <div className="w-24" />
         </div>
       </header>
 
@@ -208,31 +157,19 @@ export default function JoinSpace() {
                   <div className="flex items-center gap-2 mb-2">
                     <CardTitle className="text-2xl">{space.name}</CardTitle>
                     <Badge variant={space.visibility === 'public' ? 'default' : 'secondary'} className="gap-1">
-                      {space.visibility === 'public' ? (
-                        <>
-                          <Globe className="w-3 h-3" />
-                          {t("spaces.public")}
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-3 h-3" />
-                          {t("spaces.private")}
-                        </>
-                      )}
+                      {space.visibility === 'public' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                      {space.visibility === 'public' ? 'Public' : 'Privé'}
                     </Badge>
                   </div>
                   <CardDescription className="text-base">{space.description}</CardDescription>
-                  
                   <div className="flex flex-wrap gap-2 mt-3">
                     <Badge variant="outline" className="gap-1">
                       <Bot className="w-3 h-3" />
-                      {space.aiModel}
+                      {space.ai_model}
                     </Badge>
                     <Badge variant="secondary">{space.category}</Badge>
-                    {space.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
+                    {(space.tags || []).map((tag) => (
+                      <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
                     ))}
                   </div>
                 </div>
@@ -240,67 +177,19 @@ export default function JoinSpace() {
             </CardHeader>
             
             <CardContent className="space-y-6">
-              {/* Statistiques */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-4 bg-muted/30 rounded-lg">
                   <Users className="w-5 h-5 mx-auto mb-2 text-primary" />
-                  <div className="text-2xl font-bold text-foreground">{space.stats.members}</div>
-                  <div className="text-sm text-muted-foreground">{t("spaces.members")}</div>
+                  <div className="text-2xl font-bold text-foreground">{members.length}</div>
+                  <div className="text-sm text-muted-foreground">Membres</div>
                 </div>
                 <div className="text-center p-4 bg-muted/30 rounded-lg">
-                  <FileText className="w-5 h-5 mx-auto mb-2 text-accent" />
-                  <div className="text-2xl font-bold text-foreground">{space.stats.documents}</div>
-                  <div className="text-sm text-muted-foreground">{t("spaces.documents")}</div>
-                </div>
-                <div className="text-center p-4 bg-muted/30 rounded-lg">
-                  <Clock className="w-5 h-5 mx-auto mb-2 text-success" />
-                  <div className="text-2xl font-bold text-foreground">{space.stats.messages}</div>
-                  <div className="text-sm text-muted-foreground">{t("spaces.messages")}</div>
+                  <FileText className="w-5 h-5 mx-auto mb-2 text-primary" />
+                  <div className="text-2xl font-bold text-foreground">{space.category}</div>
+                  <div className="text-sm text-muted-foreground">Catégorie</div>
                 </div>
               </div>
 
-              {/* Propriétaire */}
-              <div className="space-y-2">
-                <h3 className="font-semibold text-foreground">{t("join.spaceOwner")}</h3>
-                <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-lg">
-                  <Avatar className="w-10 h-10">
-                    <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                      {space.owner.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">{space.owner.name}</span>
-                      <Crown className="w-4 h-4 text-warning" />
-                    </div>
-                    <span className="text-sm text-muted-foreground">{t("spaces.owner")}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Membres récents */}
-              {space.members.length > 1 && (
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-foreground">{t("join.recentMembers")}</h3>
-                  <div className="space-y-2">
-                    {space.members.slice(1, 4).map((member) => (
-                      <div key={member.id} className="flex items-center gap-3 p-2 bg-muted/10 rounded-lg">
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback className="bg-muted text-muted-foreground text-sm">
-                            {member.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <span className="text-sm font-medium text-foreground">{member.name}</span>
-                          <div className="text-xs text-muted-foreground">{member.lastActive}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Action de rejoindre */}
               <div className="pt-4 border-t border-border/50">
                 <Button 
                   onClick={handleJoinSpace}
@@ -309,13 +198,13 @@ export default function JoinSpace() {
                 >
                   {isJoining ? (
                     <div className="flex items-center gap-2">
-                      <div className="animate-spin w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full"></div>
-                      {t("join.joining")}
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Rejoindre...
                     </div>
                   ) : (
                     <>
                       <Users className="w-5 h-5 mr-2" />
-                      {t("join.joinThisSpace")}
+                      Rejoindre cet espace
                     </>
                   )}
                 </Button>

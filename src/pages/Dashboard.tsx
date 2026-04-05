@@ -14,117 +14,34 @@ import {
   Crown,
   TrendingUp,
   MessageSquare,
-  Target
+  Target,
+  Loader2
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { UserProfile } from "@/components/UserProfile";
 import { LanguageSelector } from "@/components/LanguageSelector";
-import { AdvancedSearch } from "@/components/AdvancedSearch";
-import { FunctionalSpaceCard } from "@/components/FunctionalSpaceCard";
 import { CreateSpaceModal } from "@/components/CreateSpaceModal";
 import { DocumentUploadModal } from "@/components/DocumentUploadModal";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useSpaces } from "@/hooks/useSpaces";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
+  const { spaces, loading } = useSpaces();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchFilters, setSearchFilters] = useState({
-    categories: [],
-    visibility: [],
-    roles: [],
-    activity: []
-  });
   const [createSpaceModalOpen, setCreateSpaceModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
-  // Mock data for spaces
-  const spaces = [
-    {
-      id: "1",
-      name: "Product Strategy",
-      description: "Strategic planning and roadmap discussions",
-      category: "Business",
-      tags: ["Strategy", "Planning", "Roadmap"],
-      visibility: 'private' as const,
-      owner: { name: "You", avatar: "" },
-      stats: { members: 8, documents: 45, messages: 124 },
-      aiModel: "GPT-5",
-      lastActivity: "2 hours ago",
-      isOwner: true,
-    },
-    {
-      id: "2",
-      name: "AI Research Hub",
-      description: "Latest developments in AI and machine learning",
-      category: "Technology",
-      tags: ["AI", "Research", "ML"],
-      visibility: 'public' as const,
-      owner: { name: "Sarah Chen", avatar: "" },
-      stats: { members: 32, documents: 89, messages: 892 },
-      aiModel: "Claude Sonnet-4",
-      lastActivity: "5 minutes ago",
-      isOwner: false,
-    },
-    {
-      id: "3",
-      name: "Design System",
-      description: "UI/UX guidelines and component library",
-      category: "Design",
-      tags: ["Design", "UI/UX", "Components"],
-      visibility: 'private' as const,
-      owner: { name: "Emma Thompson", avatar: "" },
-      stats: { members: 12, documents: 67, messages: 67 },
-      aiModel: "GPT-5",
-      lastActivity: "1 day ago",
-      isOwner: false,
-    }
-  ];
-
-  const recentActivity = [
-    {
-      space: "AI Research Hub",
-      action: t("dashboard.newDocument"),
-      time: t("dashboard.minutesAgo"),
-      user: "Sarah Chen"
-    },
-    {
-      space: "Product Strategy", 
-      action: t("dashboard.messageSent"),
-      time: t("dashboard.hoursAgo"),
-      user: t("dashboard.you")
-    },
-    {
-      space: "Design System",
-      action: t("dashboard.memberAdded"),
-      time: t("dashboard.daysAgo"),
-      user: "Mike Johnson"
-    }
-  ];
-
-  const handleSearch = (query: string, filters: any) => {
-    setSearchQuery(query);
-    setSearchFilters(filters);
-  };
-
-  // Filter spaces based on search and filters
   const filteredSpaces = spaces.filter(space => {
-    const matchesQuery = !searchQuery || 
-      space.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      space.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      space.category.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesVisibility = searchFilters.visibility.length === 0 ||
-      searchFilters.visibility.includes(space.visibility);
-
-    const matchesCategory = searchFilters.categories.length === 0 ||
-      searchFilters.categories.some(cat => 
-        space.category.toLowerCase().includes(cat.toLowerCase())
-      );
-
-    return matchesQuery && matchesVisibility && matchesCategory;
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return space.name.toLowerCase().includes(q) ||
+      (space.description || '').toLowerCase().includes(q) ||
+      (space.category || '').toLowerCase().includes(q);
   });
 
   return (
@@ -132,14 +49,12 @@ const Dashboard = () => {
       {/* Header */}
       <header className="bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold text-foreground">Tenezis Spaces</span>
+          <Link to="/" className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+              <Zap className="w-5 h-5 text-primary-foreground" />
             </div>
-          </div>
+            <span className="text-xl font-bold text-foreground">Tenezis Spaces</span>
+          </Link>
 
           <div className="flex items-center space-x-4">
             <LanguageSelector />
@@ -163,7 +78,7 @@ const Dashboard = () => {
                 {t("dashboard.welcome")}, {user?.name || 'Utilisateur'}!
               </h1>
               <p className="text-muted-foreground">
-                Vous avez {filteredSpaces.length} {t("dashboard.activeSpaces")} et 3 {t("dashboard.newMessages")}
+                {t("dashboard.activeSpaces")}: {spaces.length}
               </p>
             </div>
             <Button 
@@ -174,88 +89,30 @@ const Dashboard = () => {
               {t("dashboard.createSpace")}
             </Button>
           </div>
-
-          {/* Advanced Search */}
-          <AdvancedSearch 
-            onSearch={handleSearch}
-            placeholder={t("dashboard.searchSpaces")}
-            className="max-w-2xl"
-          />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Quick Stats */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <Card className="bg-gradient-card border-border/50 hover:shadow-card transition-all">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Users className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground">52</p>
-                      <p className="text-sm text-muted-foreground">{t("dashboard.teamMembers")}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-card border-border/50 hover:shadow-card transition-all">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-accent" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground">1,247</p>
-                      <p className="text-sm text-muted-foreground">{t("dashboard.documents")}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-card border-border/50 hover:shadow-card transition-all">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
-                      <Bot className="w-6 h-6 text-success" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground">15.2K</p>
-                      <p className="text-sm text-muted-foreground">{t("dashboard.aiMessages")}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
             {/* Spaces */}
             <Card className="shadow-elegant border-border/50">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-xl">{t("dashboard.yourSpaces")}</CardTitle>
-                    <CardDescription>
-                      {t("dashboard.manageSpaces")}
-                    </CardDescription>
+                    <CardDescription>{t("dashboard.manageSpaces")}</CardDescription>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {filteredSpaces.length} {filteredSpaces.length === 1 ? t("dashboard.results") : t("dashboard.resultsPlural")}
-                    </Badge>
-                    <Link to="/spaces">
-                      <Button variant="outline" size="sm">
-                        {t("dashboard.viewAll")}
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </Link>
-                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {filteredSpaces.length} spaces
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {filteredSpaces.length === 0 ? (
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : filteredSpaces.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Target className="w-8 h-8 text-muted-foreground" />
@@ -264,7 +121,7 @@ const Dashboard = () => {
                       {t("dashboard.noSpacesFound")}
                     </h3>
                     <p className="text-muted-foreground mb-4">
-                      {t("dashboard.adjustSearch")}
+                      Créez votre premier espace pour commencer
                     </p>
                     <Button 
                       onClick={() => setCreateSpaceModalOpen(true)}
@@ -275,13 +132,58 @@ const Dashboard = () => {
                     </Button>
                   </div>
                 ) : (
-                  filteredSpaces.map((space, index) => (
-                  <div 
-                    key={space.id}
-                    style={{ animationDelay: `${index * 0.1}s` }}
-                  >
-                    <FunctionalSpaceCard space={space} />
-                  </div>
+                  filteredSpaces.map((space) => (
+                    <Card
+                      key={space.id}
+                      className="border border-border/50 hover:shadow-card transition-all group cursor-pointer bg-gradient-card"
+                      onClick={() => navigate(`/spaces/${space.id}`)}
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-start space-x-3 flex-1">
+                            <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0 text-primary-foreground font-bold text-lg">
+                              {space.image_url ? (
+                                <img src={space.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                              ) : (
+                                space.name.charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            <div className="space-y-1 flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                                  {space.name}
+                                </h3>
+                                {space.owner_id === user?.id && (
+                                  <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                                )}
+                                <Badge variant={space.visibility === "private" ? "secondary" : "outline"} className="flex-shrink-0 gap-1">
+                                  {space.visibility === "private" ? <Lock className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
+                                  {space.visibility === "private" ? "Privé" : "Public"}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-1">
+                                {space.description}
+                              </p>
+                              <div className="flex flex-wrap gap-1">
+                                {(space.tags || []).slice(0, 3).map((tag, i) => (
+                                  <Badge key={i} variant="outline" className="text-xs">{tag}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="secondary" className="text-xs">{space.ai_model || 'IA'}</Badge>
+                            <Badge variant="outline" className="text-xs">{space.category}</Badge>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{new Date(space.updated_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))
                 )}
               </CardContent>
@@ -290,34 +192,6 @@ const Dashboard = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Recent Activity */}
-            <Card className="shadow-elegant border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg">{t("dashboard.recentActivity")}</CardTitle>
-                <CardDescription>
-                  {t("dashboard.latestUpdates")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-start space-x-3 p-3 rounded-lg bg-muted/30">
-                    <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                    <div className="space-y-1 flex-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {activity.action}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("dashboard.in")} {activity.space} • {t("dashboard.by")} {activity.user}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {activity.time}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
             {/* Quick Actions */}
             <Card className="shadow-elegant border-border/50">
               <CardHeader>
@@ -332,28 +206,16 @@ const Dashboard = () => {
                   <Plus className="w-4 h-4 mr-3" />
                   <div className="text-left">
                     <p className="font-medium">{t("spaces.create")}</p>
-                    <p className="text-xs text-muted-foreground">{t("dashboard.startNewWorkspace")}</p>
-                  </div>
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start h-auto p-3"
-                  onClick={() => setUploadModalOpen(true)}
-                >
-                  <FileText className="w-4 h-4 mr-3" />
-                  <div className="text-left">
-                    <p className="font-medium">{t("dashboard.uploadDocuments")}</p>
-                    <p className="text-xs text-muted-foreground">{t("dashboard.addToKnowledge")}</p>
+                    <p className="text-xs text-muted-foreground">Démarrer un nouvel espace</p>
                   </div>
                 </Button>
 
-                <Link to="/spaces/discover">
+                <Link to="/discover" className="block">
                   <Button variant="ghost" className="w-full justify-start h-auto p-3">
                     <TrendingUp className="w-4 h-4 mr-3" />
                     <div className="text-left">
                       <p className="font-medium">{t("dashboard.discoverSpaces")}</p>
-                      <p className="text-xs text-muted-foreground">{t("dashboard.findPublicSpaces")}</p>
+                      <p className="text-xs text-muted-foreground">Explorer les espaces publics</p>
                     </div>
                   </Button>
                 </Link>
