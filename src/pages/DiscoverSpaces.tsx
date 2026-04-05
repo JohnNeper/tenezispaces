@@ -4,120 +4,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
-  Search, 
-  Users, 
-  FileText, 
-  Bot, 
-  Globe, 
-  Lock, 
-  Sparkles,
-  Target,
-  Code,
-  Palette,
-  TrendingUp,
-  BookOpen,
-  Microscope,
-  Briefcase,
-  GraduationCap
+  Search, Users, FileText, Bot, Globe, Sparkles, Target,
+  Code, Palette, TrendingUp, BookOpen, Microscope, Briefcase, GraduationCap, Loader2
 } from "lucide-react";
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
+  Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious,
 } from "@/components/ui/carousel";
-import { spaceStore } from "@/stores/spaceStore";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSpaces, type SpaceData } from "@/hooks/useSpaces";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 
 const categories = [
   { id: 'research', name: { fr: 'Recherche', en: 'Research' }, icon: Microscope },
-  { id: 'tech', name: { fr: 'Technologie', en: 'Technology' }, icon: Code },
+  { id: 'engineering', name: { fr: 'Technologie', en: 'Technology' }, icon: Code },
   { id: 'design', name: { fr: 'Design', en: 'Design' }, icon: Palette },
-  { id: 'business', name: { fr: 'Business', en: 'Business' }, icon: Briefcase },
   { id: 'marketing', name: { fr: 'Marketing', en: 'Marketing' }, icon: TrendingUp },
   { id: 'education', name: { fr: 'Éducation', en: 'Education' }, icon: GraduationCap },
-  { id: 'docs', name: { fr: 'Documentation', en: 'Documentation' }, icon: BookOpen },
-];
-
-// Mock public spaces
-const mockPublicSpaces = [
-  {
-    id: "1",
-    name: "AI Research Hub",
-    description: "Collaborative space for AI research papers, discussions, and cutting-edge developments in artificial intelligence",
-    category: "research",
-    tags: ["AI", "ML", "Research"],
-    visibility: 'public' as const,
-    owner: { name: "Dr. Sarah Chen", avatar: "" },
-    stats: { members: 248, documents: 1420, messages: 8924 },
-    aiModel: "GPT-5",
-    lastActivity: "5 minutes ago",
-  },
-  {
-    id: "2",
-    name: "Frontend Dev Community",
-    description: "Best practices, code reviews, and discussions about React, Vue, and modern web development",
-    category: "tech",
-    tags: ["React", "Web Dev", "JavaScript"],
-    visibility: 'public' as const,
-    owner: { name: "Alex Rodriguez", avatar: "" },
-    stats: { members: 892, documents: 567, messages: 15234 },
-    aiModel: "Claude Sonnet-4",
-    lastActivity: "2 minutes ago",
-  },
-  {
-    id: "3",
-    name: "UX Design Patterns",
-    description: "Curated collection of UX patterns, case studies, and design system resources for modern interfaces",
-    category: "design",
-    tags: ["UX", "UI", "Design Systems"],
-    visibility: 'public' as const,
-    owner: { name: "Emma Thompson", avatar: "" },
-    stats: { members: 456, documents: 234, messages: 5678 },
-    aiModel: "GPT-4",
-    lastActivity: "15 minutes ago",
-  },
-  {
-    id: "4",
-    name: "Product Strategy Hub",
-    description: "Strategic planning, market analysis, and product roadmap discussions for product managers",
-    category: "business",
-    tags: ["Strategy", "Product", "Planning"],
-    visibility: 'public' as const,
-    owner: { name: "Michael Chen", avatar: "" },
-    stats: { members: 324, documents: 892, messages: 4521 },
-    aiModel: "GPT-5",
-    lastActivity: "30 minutes ago",
-  },
-  {
-    id: "5",
-    name: "Growth Marketing Lab",
-    description: "Data-driven growth strategies, A/B testing results, and marketing automation best practices",
-    category: "marketing",
-    tags: ["Growth", "Marketing", "Analytics"],
-    visibility: 'public' as const,
-    owner: { name: "Lisa Wang", avatar: "" },
-    stats: { members: 567, documents: 445, messages: 7834 },
-    aiModel: "Claude Sonnet-4",
-    lastActivity: "1 hour ago",
-  },
-  {
-    id: "6",
-    name: "Data Science Learning",
-    description: "Educational resources, tutorials, and projects for aspiring data scientists and ML engineers",
-    category: "education",
-    tags: ["Data Science", "Learning", "Python"],
-    visibility: 'public' as const,
-    owner: { name: "Prof. David Kim", avatar: "" },
-    stats: { members: 1234, documents: 789, messages: 12453 },
-    aiModel: "GPT-4",
-    lastActivity: "45 minutes ago",
-  },
+  { id: 'other', name: { fr: 'Autre', en: 'Other' }, icon: BookOpen },
 ];
 
 interface DiscoverSpacesProps {
@@ -126,57 +33,64 @@ interface DiscoverSpacesProps {
 
 export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { joinSpace } = useSpaces();
   const { t, currentLanguage } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [spaces, setSpaces] = useState<typeof mockPublicSpaces>(mockPublicSpaces);
+  const [publicSpaces, setPublicSpaces] = useState<SpaceData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load public spaces from store
-    const publicSpaces = spaceStore.getPublicSpaces();
-    if (publicSpaces.length > 0) {
-      setSpaces(publicSpaces as any);
-    }
+    const fetchPublicSpaces = async () => {
+      const { data } = await supabase
+        .from('spaces')
+        .select('*')
+        .eq('visibility', 'public')
+        .order('updated_at', { ascending: false });
+      setPublicSpaces((data as SpaceData[]) || []);
+      setLoading(false);
+    };
+    fetchPublicSpaces();
   }, []);
 
-  const filteredSpaces = spaces.filter(space => {
+  const filteredSpaces = publicSpaces.filter(space => {
     const matchesSearch = !searchQuery || 
       space.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      space.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      space.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+      (space.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (space.tags || []).some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory = !selectedCategory || space.category === selectedCategory;
-    
     return matchesSearch && matchesCategory;
   });
 
-  const handleJoinSpace = (spaceId: string) => {
+  const handleJoinSpace = async (spaceId: string) => {
     if (!isAuthenticated) {
-      // Store intended destination
       sessionStorage.setItem('redirectAfterLogin', `/spaces/${spaceId}`);
       onJoinClick?.();
       return;
     }
     
-    // Redirect directly to space chat
-    navigate(`/spaces/${spaceId}`);
-    toast.success(t("spaces.joinSuccess"));
+    try {
+      await joinSpace(spaceId);
+      navigate(`/spaces/${spaceId}`);
+      toast.success(t("spaces.joinSuccess") || "Espace rejoint !");
+    } catch (error: any) {
+      // If already member, just navigate
+      if (error?.message?.includes('duplicate')) {
+        navigate(`/spaces/${spaceId}`);
+      } else {
+        toast.error("Erreur lors de la jonction");
+      }
+    }
   };
 
   const getSpaceColor = (name: string) => {
     const colors = [
-      'from-blue-500 to-blue-600',
-      'from-purple-500 to-purple-600',
-      'from-pink-500 to-pink-600',
-      'from-green-500 to-green-600',
-      'from-yellow-500 to-yellow-600',
-      'from-red-500 to-red-600',
-      'from-indigo-500 to-indigo-600',
-      'from-teal-500 to-teal-600',
+      'from-blue-500 to-blue-600', 'from-purple-500 to-purple-600',
+      'from-pink-500 to-pink-600', 'from-green-500 to-green-600',
+      'from-yellow-500 to-yellow-600', 'from-red-500 to-red-600',
     ];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
+    return colors[name.charCodeAt(0) % colors.length];
   };
 
   return (
@@ -197,7 +111,6 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
             </p>
           </div>
 
-          {/* Search Bar */}
           <div className="relative max-w-2xl mx-auto">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/70" />
             <Input
@@ -211,28 +124,16 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
         </div>
       </div>
 
-      {/* Categories Filter - Carousel */}
+      {/* Categories Filter */}
       <div className="bg-background/95 backdrop-blur-md border-b border-border/50 sticky top-0 z-40">
         <div className="container mx-auto px-4 py-6">
           <div className="text-center mb-4">
             <h2 className="text-xl font-semibold text-foreground mb-1">
-              {filteredSpaces.length} {t("discover.spacesAvailable")}
+              {loading ? "..." : `${filteredSpaces.length} ${t("discover.spacesAvailable")}`}
             </h2>
-            <p className="text-sm text-muted-foreground">
-              {selectedCategory 
-                ? `${t("spaces.category")}: ${categories.find(c => c.id === selectedCategory)?.name[currentLanguage.code as 'fr' | 'en'] || categories.find(c => c.id === selectedCategory)?.name.en}`
-                : t("spaces.allCategories")
-              }
-            </p>
           </div>
           
-          <Carousel
-            opts={{
-              align: "center",
-              loop: true,
-            }}
-            className="w-full max-w-4xl mx-auto"
-          >
+          <Carousel opts={{ align: "center", loop: true }} className="w-full max-w-4xl mx-auto">
             <CarouselContent className="-ml-2 md:-ml-4">
               <CarouselItem className="pl-2 md:pl-4 basis-auto">
                 <Button
@@ -268,18 +169,19 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
         </div>
       </div>
 
-      {/* Spaces Carousel */}
+      {/* Spaces */}
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-foreground mb-2">
             {t("discover.featuredSpaces")}
           </h2>
-          <p className="text-muted-foreground">
-            {t("discover.exploreTopSpaces")}
-          </p>
         </div>
 
-        {filteredSpaces.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : filteredSpaces.length === 0 ? (
           <Card className="max-w-lg mx-auto shadow-elegant border-border/50 bg-gradient-card">
             <CardContent className="p-12 text-center">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -294,104 +196,48 @@ export default function DiscoverSpaces({ onJoinClick }: DiscoverSpacesProps) {
             </CardContent>
           </Card>
         ) : (
-          <Carousel
-            opts={{
-              align: "start",
-              loop: true,
-            }}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-2 md:-ml-4">
-              {filteredSpaces.map((space) => (
-                <CarouselItem key={space.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
-                  <Card className="group shadow-elegant border-border/50 hover:shadow-glow transition-all duration-300 bg-gradient-card overflow-hidden h-full">
-                    <CardHeader>
-                      <div className="flex items-start gap-4 mb-3">
-                        {/* Space Image/Avatar */}
-                        <div className="relative">
-                          {space.owner.avatar ? (
-                            <div className="w-20 h-20 rounded-xl overflow-hidden shadow-elegant border-2 border-primary/20">
-                              <img src={space.owner.avatar} alt={space.name} className="w-full h-full object-cover" />
-                            </div>
-                          ) : (
-                            <div className={`w-20 h-20 bg-gradient-to-br ${getSpaceColor(space.name)} rounded-xl flex items-center justify-center text-white font-bold text-3xl shadow-glow border-2 border-primary/20`}>
-                              {space.name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-background rounded-full flex items-center justify-center border-2 border-border">
-                            {space.visibility === 'public' ? (
-                              <Globe className="w-4 h-4 text-primary" />
-                            ) : (
-                              <Lock className="w-4 h-4 text-muted-foreground" />
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-lg line-clamp-1 mb-1">{space.name}</CardTitle>
-                          <Badge variant="secondary" className="text-xs">
-                            <Bot className="w-3 h-3 mr-1" />
-                            {space.aiModel}
-                          </Badge>
-                        </div>
-                      </div>
-                      <CardDescription className="line-clamp-2">{space.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Tags */}
-                      <div className="flex flex-wrap gap-2">
-                        {space.tags.slice(0, 3).map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredSpaces.map((space) => (
+              <Card key={space.id} className="group shadow-elegant border-border/50 hover:shadow-glow transition-all duration-300 bg-gradient-card overflow-hidden h-full">
+                <CardHeader>
+                  <div className="flex items-start gap-4 mb-3">
+                    <div className={`w-16 h-16 bg-gradient-to-br ${getSpaceColor(space.name)} rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-glow border-2 border-primary/20 flex-shrink-0`}>
+                      {space.image_url ? (
+                        <img src={space.image_url} alt="" className="w-full h-full object-cover rounded-xl" />
+                      ) : (
+                        space.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg line-clamp-1 mb-1">{space.name}</CardTitle>
+                      <Badge variant="secondary" className="text-xs">
+                        <Bot className="w-3 h-3 mr-1" />
+                        {space.ai_model || 'IA'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <CardDescription className="line-clamp-2">{space.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {(space.tags || []).slice(0, 3).map((tag, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">{tag}</Badge>
+                    ))}
+                  </div>
 
-                      {/* Stats */}
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Users className="w-3 h-3" />
-                          <span>{space.stats.members}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <FileText className="w-3 h-3" />
-                          <span>{space.stats.documents}</span>
-                        </div>
-                      </div>
+                  <Badge variant="outline" className="text-xs">{space.category}</Badge>
 
-                      {/* Owner */}
-                      <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-                        <Avatar className="w-6 h-6">
-                          <AvatarFallback className="text-xs bg-muted">
-                            {space.owner.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs text-muted-foreground truncate block">
-                            {space.owner.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground/70">
-                            {typeof space.lastActivity === 'string' ? space.lastActivity : new Date(space.lastActivity).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Join Button */}
-                      <Button 
-                        className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300 group-hover:scale-105"
-                        onClick={() => handleJoinSpace(space.id)}
-                      >
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        {t("discover.joinSpace")}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="hidden md:flex -left-12" />
-            <CarouselNext className="hidden md:flex -right-12" />
-          </Carousel>
+                  <Button 
+                    className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                    onClick={() => handleJoinSpace(space.id)}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {t("discover.joinSpace")}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
     </div>
