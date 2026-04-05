@@ -41,8 +41,7 @@ export const FunctionalSpaceCard = ({ space }: FunctionalSpaceCardProps) => {
   const { t } = useLanguage();
 
   const handleSpaceClick = () => {
-    // Navigate to space chat
-    window.location.href = `/spaces/${space.id}/chat`;
+    window.location.href = `/spaces/${space.id}`;
   };
 
   return (
@@ -106,7 +105,7 @@ export const FunctionalSpaceCard = ({ space }: FunctionalSpaceCardProps) => {
                   <Share className="w-4 h-4 mr-2" />
                   Partager
                 </DropdownMenuItem>
-                <Link to={`/spaces/${space.id}/chat`}>
+                <Link to={`/spaces/${space.id}`}>
                   <DropdownMenuItem>
                     <ArrowRight className="w-4 h-4 mr-2" />
                     Ouvrir
